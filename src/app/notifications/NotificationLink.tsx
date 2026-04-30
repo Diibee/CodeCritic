@@ -32,10 +32,10 @@ export default function NotificationLink({
   }
 
   return (
-    <div className={`group relative flex items-start gap-3 rounded-2xl border p-4 transition-colors hover:border-zinc-600 ${
+    <div className={`group relative flex items-center gap-3 rounded-2xl border p-4 transition-colors hover:border-zinc-600 ${
       read ? 'border-zinc-800 bg-zinc-900/40' : 'border-zinc-700 bg-zinc-900'
     }`}>
-      <button onClick={handleClick} className="flex flex-1 items-start gap-3 text-left">
+      <button onClick={handleClick} className="flex flex-1 items-center gap-3 text-left">
         {children}
       </button>
       <button
