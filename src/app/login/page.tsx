@@ -17,8 +17,10 @@ function validatePassword(pw: string) {
 
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('signin')
+  const [nickname, setNickname] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -27,6 +29,7 @@ export default function LoginPage() {
 
   const pwChecks = validatePassword(password)
   const pwValid = Object.values(pwChecks).every(Boolean)
+  const passwordsMatch = password === confirmPassword
 
   async function handleOAuth(provider: 'google' | 'github' | 'discord') {
     const supabase = createClient()
@@ -40,9 +43,10 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
 
-    if (mode === 'signup' && !pwValid) {
-      setError('Password does not meet the requirements.')
-      return
+    if (mode === 'signup') {
+      if (!nickname.trim()) { setError('Nickname is required.'); return }
+      if (!pwValid) { setError('Password does not meet the requirements.'); return }
+      if (!passwordsMatch) { setError('Passwords do not match.'); return }
     }
 
     setLoading(true)
@@ -52,7 +56,10 @@ export default function LoginPage() {
       const { error: err } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { full_name: nickname.trim() },
+        },
       })
       setLoading(false)
       if (err) { setError(err.message); return }
@@ -120,6 +127,19 @@ export default function LoginPage() {
 
           {/* Email/password form */}
           <form onSubmit={handleEmailAuth} className="space-y-3">
+
+            {/* Nickname — signup only */}
+            {mode === 'signup' && (
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Nickname"
+                required
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
+              />
+            )}
+
             <input
               type="email"
               value={email}
@@ -148,7 +168,30 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Password requirements — shown only on signup */}
+            {/* Confirm password — signup only */}
+            {mode === 'signup' && (
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  required
+                  className={`w-full rounded-xl border bg-zinc-800 px-4 py-2.5 pr-11 text-sm text-white placeholder-zinc-600 focus:outline-none ${
+                    confirmPassword.length > 0 && !passwordsMatch
+                      ? 'border-red-600 focus:border-red-500'
+                      : 'border-zinc-700 focus:border-violet-500'
+                  }`}
+                />
+                {confirmPassword.length > 0 && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                    {passwordsMatch ? '✓' : '✗'}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Password requirements — signup only */}
             {mode === 'signup' && password.length > 0 && (
               <ul className="space-y-1 rounded-xl bg-zinc-800/50 px-4 py-3 text-xs">
                 <Req ok={pwChecks.length} label="At least 8 characters" />
