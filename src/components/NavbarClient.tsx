@@ -7,9 +7,9 @@ import type { User } from '@supabase/supabase-js'
 
 export default function NavbarClient({ user }: { user: User | null }) {
   const router = useRouter()
-  const supabase = createClient()
 
   async function handleSignOut() {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
