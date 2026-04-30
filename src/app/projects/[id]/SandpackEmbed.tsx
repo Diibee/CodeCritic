@@ -8,14 +8,24 @@ import {
 
 type Template = 'react' | 'react-ts' | 'vue' | 'vanilla' | 'static'
 
-// CDN replacements for common large local libraries
+// Pin p5 to v1.x — registerMethod was removed in v2.0
 const CDN_REPLACEMENTS: [RegExp, string][] = [
-  [/src=["'][^"']*\bp5\.min\.js["']/g,       'src="https://cdn.jsdelivr.net/npm/p5/lib/p5.min.js"'],
-  [/src=["'][^"']*\bp5\.js["']/g,            'src="https://cdn.jsdelivr.net/npm/p5/lib/p5.js"'],
-  [/src=["'][^"']*\bp5\.sound\.min\.js["']/g,'src="https://cdn.jsdelivr.net/npm/p5/lib/addons/p5.sound.min.js"'],
-  [/src=["'][^"']*\bp5\.sound\.js["']/g,     'src="https://cdn.jsdelivr.net/npm/p5/lib/addons/p5.sound.js"'],
+  [/src=["'][^"']*\bp5\.min\.js["']/g,       'src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js"'],
+  [/src=["'][^"']*\bp5\.js["']/g,            'src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.js"'],
+  [/src=["'][^"']*\bp5\.sound\.min\.js["']/g,'src="https://cdn.jsdelivr.net/npm/p5@1/lib/addons/p5.sound.min.js"'],
+  [/src=["'][^"']*\bp5\.sound\.js["']/g,     'src="https://cdn.jsdelivr.net/npm/p5@1/lib/addons/p5.sound.js"'],
   [/src=["'][^"']*\bthree\.min\.js["']/g,    'src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"'],
   [/src=["'][^"']*\bthree\.js["']/g,         'src="https://cdn.jsdelivr.net/npm/three/build/three.js"'],
+]
+
+// Files that get CDN-replaced should be removed from the virtual FS to prevent double loading
+const CDN_FILENAME_PATTERNS = [
+  /\bp5\.min\.js$/,
+  /\bp5\.js$/,
+  /\bp5\.sound\.min\.js$/,
+  /\bp5\.sound\.js$/,
+  /\bthree\.min\.js$/,
+  /\bthree\.js$/,
 ]
 
 function patchFiles(files: Record<string, string>): Record<string, string> {
@@ -27,7 +37,8 @@ function patchFiles(files: Record<string, string>): Record<string, string> {
         patched = patched.replace(pattern, replacement)
       }
       result[path] = patched
-    } else {
+    } else if (!CDN_FILENAME_PATTERNS.some((p) => p.test(path))) {
+      // Drop local copies of CDN-replaced libs to avoid double-loading
       result[path] = content
     }
   }
