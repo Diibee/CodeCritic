@@ -10,6 +10,7 @@ type Mode = 'signin' | 'signup'
 function validatePassword(pw: string) {
   return {
     length: pw.length >= 8,
+    uppercase: /[A-Z]/.test(pw),
     number: /[0-9]/.test(pw),
     special: /[^a-zA-Z0-9]/.test(pw),
   }
@@ -195,6 +196,7 @@ export default function LoginPage() {
             {mode === 'signup' && password.length > 0 && (
               <ul className="space-y-1 rounded-xl bg-zinc-800/50 px-4 py-3 text-xs">
                 <Req ok={pwChecks.length} label="At least 8 characters" />
+                <Req ok={pwChecks.uppercase} label="At least 1 uppercase letter" />
                 <Req ok={pwChecks.number} label="At least 1 number" />
                 <Req ok={pwChecks.special} label="At least 1 special character (!@#$…)" />
               </ul>
