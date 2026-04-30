@@ -40,7 +40,7 @@ export default async function SettingsPage() {
 
         <SubscriptionSection
           isPremium={subscription?.status === 'active'}
-          currentPeriodEnd={subscription?.current_period_end ?? null}
+          periodEnd={subscription?.current_period_end ?? null}
         />
 
         <SettingsForm
