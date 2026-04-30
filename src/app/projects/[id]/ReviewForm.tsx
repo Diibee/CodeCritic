@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { submitReview } from '@/app/actions/review'
 
 export default function ReviewForm({ projectId, userId }: { projectId: string; userId: string }) {
   const [rating, setRating] = useState(0)
@@ -17,18 +17,13 @@ export default function ReviewForm({ projectId, userId }: { projectId: string; u
     if (!rating || !comment.trim()) return
 
     setLoading(true)
-    const supabase = createClient()
-
-    await supabase.from('reviews').insert({
-      project_id: projectId,
-      reviewer_id: userId,
-      rating,
-      comment: comment.trim(),
-    })
-
-    setLoading(false)
-    setSubmitted(true)
-    router.refresh()
+    try {
+      await submitReview(projectId, rating, comment)
+      setSubmitted(true)
+      router.refresh()
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {

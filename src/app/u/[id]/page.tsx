@@ -3,6 +3,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
+import { checkAndGrantAchievements } from '@/app/actions/achievements'
+import { ACHIEVEMENTS, ACHIEVEMENT_MAP, CATEGORIES } from '@/lib/achievements'
 
 function getGitHubPreviewUrl(githubUrl: string | null): string | null {
   if (!githubUrl) return null
@@ -43,6 +45,18 @@ export default async function UserProfilePage({
   const avgRating = allRatings.length > 0 ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : null
 
   const displayName = profile.full_name || 'Anonymous'
+
+  // Trigger achievement check for own profile, then fetch earned achievements
+  if (isOwnProfile) {
+    await checkAndGrantAchievements(id).catch(() => {})
+  }
+
+  const { data: earnedData } = await supabase
+    .from('user_achievements')
+    .select('achievement_key, unlocked_at')
+    .eq('user_id', id)
+
+  const earnedKeys = new Set(earnedData?.map((a) => a.achievement_key) ?? [])
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -112,6 +126,49 @@ export default async function UserProfilePage({
             </div>
             <div className="mt-1 text-xs text-zinc-500">Avg rating</div>
           </div>
+        </div>
+
+        {/* Achievements */}
+        <div className="mb-10">
+          <h2 className="mb-5 text-lg font-semibold text-white">
+            Achievements{' '}
+            <span className="font-normal text-zinc-600">({earnedKeys.size}/{ACHIEVEMENTS.length})</span>
+          </h2>
+
+          {CATEGORIES.map((category) => {
+            const categoryAchievements = ACHIEVEMENTS.filter((a) => a.category === category)
+            return (
+              <div key={category} className="mb-6">
+                <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
+                  {category}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {categoryAchievements.map((achievement) => {
+                    const earned = earnedKeys.has(achievement.key)
+                    return (
+                      <div
+                        key={achievement.key}
+                        title={achievement.description}
+                        className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                          earned
+                            ? 'border-violet-800/40 bg-violet-900/10'
+                            : 'border-zinc-800 bg-zinc-900/50 opacity-40'
+                        }`}
+                      >
+                        <span className="text-xl shrink-0">{earned ? achievement.emoji : '🔒'}</span>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-medium truncate ${earned ? 'text-white' : 'text-zinc-500'}`}>
+                            {achievement.name}
+                          </p>
+                          <p className="truncate text-[11px] text-zinc-600">{achievement.description}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Projects */}

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import Groq from 'groq-sdk'
+import { checkAndGrantAchievements } from './achievements'
 
 const EXCLUDED = new Set(['node_modules', 'dist', '.next', 'build', 'out', '.git', 'coverage', '.turbo'])
 const ALLOWED_EXT = new Set(['js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rs', 'css', 'html', 'json', 'md'])
@@ -131,5 +132,6 @@ Be constructive, specific, and reference actual code you see.`
     .update({ ai_review: review, ai_review_at: new Date().toISOString() })
     .eq('id', projectId)
 
+  await checkAndGrantAchievements(user.id)
   revalidatePath(`/projects/${projectId}`)
 }
