@@ -77,12 +77,12 @@ export async function POST(request: NextRequest) {
     }
 
     case 'invoice.payment_failed': {
-      const invoice = event.data.object as Stripe.Invoice
-      if (invoice.subscription) {
+      const invoice = event.data.object as unknown as Record<string, unknown>
+      if (invoice['subscription']) {
         await supabaseAdmin.from('subscriptions').update({
           status: 'past_due',
           updated_at: new Date().toISOString(),
-        }).eq('stripe_customer_id', invoice.customer as string)
+        }).eq('stripe_customer_id', invoice['customer'] as string)
       }
       break
     }
