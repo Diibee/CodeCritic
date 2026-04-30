@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 
-export default function RunEmbed({ embedUrl }: { embedUrl: string }) {
+export default function RunEmbed({ demoUrl }: { demoUrl: string }) {
   const [started, setStarted] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
 
   if (!started) {
     return (
@@ -11,8 +12,7 @@ export default function RunEmbed({ embedUrl }: { embedUrl: string }) {
         <div className="mb-4 text-5xl">🖥️</div>
         <h3 className="mb-2 text-lg font-semibold text-white">Live preview</h3>
         <p className="mb-6 max-w-sm text-sm text-zinc-500">
-          Runs the project directly in the browser via StackBlitz WebContainers.
-          Works with JavaScript / Node.js projects.
+          Preview the running project directly here.
         </p>
         <button
           onClick={() => setStarted(true)}
@@ -24,28 +24,28 @@ export default function RunEmbed({ embedUrl }: { embedUrl: string }) {
     )
   }
 
-  const fullUrl = embedUrl.replace('?embed=1&', '?').replace('&hideNavigation=1&hideDevTools=1', '')
-
   return (
-    <div className="overflow-hidden rounded-2xl border border-zinc-800">
+    <div className={fullscreen ? 'fixed inset-0 z-50 bg-zinc-950' : 'overflow-hidden rounded-2xl border border-zinc-800'}>
+      {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-zinc-500">Running via StackBlitz WebContainers</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-green-400" />
+          <span className="truncate text-xs text-zinc-500">{demoUrl}</span>
         </div>
-        <a
-          href={fullUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-violet-400 hover:underline"
+        <button
+          onClick={() => setFullscreen((v) => !v)}
+          className="ml-3 shrink-0 text-xs text-zinc-400 hover:text-white transition-colors"
+          title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         >
-          Open fullscreen ↗
-        </a>
+          {fullscreen ? '✕ Exit' : '⛶ Fullscreen'}
+        </button>
       </div>
+
       <iframe
-        src={embedUrl}
-        className="h-[700px] w-full bg-white"
+        src={demoUrl}
+        className={fullscreen ? 'h-[calc(100vh-37px)] w-full' : 'h-[700px] w-full'}
         title="Project live preview"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
       />
     </div>
   )
