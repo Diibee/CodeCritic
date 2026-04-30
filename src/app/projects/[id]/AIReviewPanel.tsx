@@ -82,7 +82,6 @@ export default function AIReviewPanel({
   initialReview: string | null
   reviewAt: string | null
 }) {
-  const [review] = useState(initialReview)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
   const router = useRouter()
@@ -99,7 +98,7 @@ export default function AIReviewPanel({
     })
   }
 
-  if (!review) {
+  if (!initialReview) {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-800 text-3xl">
@@ -142,24 +141,19 @@ export default function AIReviewPanel({
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2">
-        <span className="rounded-full bg-violet-600/20 px-3 py-1 text-xs font-medium text-violet-300">
-          ✨ Powered by Llama 3.3 via Groq
-        </span>
-        {reviewAt && (
-          <span className="text-xs text-zinc-600">
-            Generated{' '}
-            {new Date(reviewAt).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-            })}
-          </span>
-        )}
-      </div>
+      {reviewAt && (
+        <p className="mb-4 text-xs text-zinc-600">
+          Generated{' '}
+          {new Date(reviewAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })}
+        </p>
+      )}
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-        <MarkdownRenderer content={review} />
+        <MarkdownRenderer content={initialReview} />
       </div>
     </div>
   )
