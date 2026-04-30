@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import SettingsForm from './SettingsForm'
+import SubscriptionSection from './SubscriptionSection'
 import type { UserIdentity } from '@supabase/supabase-js'
 
 export default async function SettingsPage() {
@@ -19,6 +20,12 @@ export default async function SettingsPage() {
   const { data: identitiesData } = await supabase.auth.getUserIdentities()
   const identities: UserIdentity[] = identitiesData?.identities ?? []
 
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('status, current_period_end')
+    .eq('user_id', user.id)
+    .single()
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
@@ -30,6 +37,11 @@ export default async function SettingsPage() {
             Manage your profile and account preferences.
           </p>
         </div>
+
+        <SubscriptionSection
+          isPremium={subscription?.status === 'active'}
+          currentPeriodEnd={subscription?.current_period_end ?? null}
+        />
 
         <SettingsForm
           userId={user.id}

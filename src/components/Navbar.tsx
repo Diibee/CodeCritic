@@ -47,6 +47,9 @@ export default async function Navbar() {
             <Link href="/leaderboard" className="hover:text-white transition-colors">
               Leaderboard
             </Link>
+            <Link href="/pricing" className="hover:text-white transition-colors">
+              Pricing
+            </Link>
             {user && (
               <Link href="/dashboard" className="hover:text-white transition-colors">
                 Dashboard

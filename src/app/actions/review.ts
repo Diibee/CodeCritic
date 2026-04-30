@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { checkAndGrantAchievements } from './achievements'
+import { isPremium } from '@/lib/subscription'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { sendReviewNotification } from '@/lib/email'
 
 export async function submitReview(projectId: string, rating: number, comment: string) {
   const supabase = await createClient()
@@ -21,15 +24,40 @@ export async function submitReview(projectId: string, rating: number, comment: s
   // Check achievements for the reviewer
   await checkAndGrantAchievements(user.id)
 
-  // Check achievements for the project owner
+  // Get project owner
   const { data: project } = await supabase
     .from('projects')
-    .select('user_id')
+    .select('user_id, title')
     .eq('id', projectId)
     .single()
 
   if (project && project.user_id !== user.id) {
     await checkAndGrantAchievements(project.user_id)
+
+    // Send email notification if owner is Premium
+    try {
+      const ownerIsPremium = await isPremium(project.user_id)
+      if (ownerIsPremium) {
+        const { data: { user: ownerUser } } = await supabaseAdmin.auth.admin.getUserById(project.user_id)
+        const { data: reviewerProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+
+        if (ownerUser?.email) {
+          await sendReviewNotification({
+            ownerEmail: ownerUser.email,
+            ownerName: ownerUser.user_metadata?.full_name ?? 'there',
+            projectTitle: project.title,
+            projectId,
+            reviewerName: reviewerProfile?.full_name ?? 'Someone',
+          })
+        }
+      }
+    } catch {
+      // Email failure shouldn't break the review submission
+    }
   }
 
   revalidatePath(`/projects/${projectId}`)

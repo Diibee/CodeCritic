@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import { checkAndGrantAchievements } from '@/app/actions/achievements'
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, CATEGORIES } from '@/lib/achievements'
+import { isPremium } from '@/lib/subscription'
 
 function getGitHubPreviewUrl(githubUrl: string | null): string | null {
   if (!githubUrl) return null
@@ -58,6 +59,8 @@ export default async function UserProfilePage({
 
   const earnedKeys = new Set(earnedData?.map((a) => a.achievement_key) ?? [])
 
+  const userIsPremium = await isPremium(id)
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
@@ -86,6 +89,11 @@ export default async function UserProfilePage({
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-white">{displayName}</h1>
+              {userIsPremium && (
+                <span className="rounded-full border border-violet-700/60 bg-violet-900/20 px-2.5 py-0.5 text-xs font-medium text-violet-400">
+                  👑 Premium
+                </span>
+              )}
               {isOwnProfile && (
                 <Link
                   href="/settings"

@@ -56,7 +56,7 @@ export default async function ProjectsPage({
 
   let query = supabase
     .from('projects')
-    .select('*, reviews(rating, created_at)')
+    .select('*, reviews(rating, created_at), is_featured')
     .eq('is_public', true)
 
   if (tech) query = query.contains('tech_stack', [tech])
@@ -99,6 +99,9 @@ export default async function ProjectsPage({
       .sort((a, b) => (b.reviews?.length ?? 0) - (a.reviews?.length ?? 0))
       .slice(0, 24)
   }
+
+  // Featured projects always bubble to the top
+  projects = [...projects].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0))
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -191,9 +194,16 @@ export default async function ProjectsPage({
                   {/* Content */}
                   <div className="flex flex-1 flex-col p-5">
                     <div className="mb-2 flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors line-clamp-1">
-                        {project.title}
-                      </h3>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors line-clamp-1">
+                          {project.title}
+                        </h3>
+                        {project.is_featured && (
+                          <span className="shrink-0 rounded-full border border-amber-700/60 bg-amber-900/20 px-2 py-0.5 text-[10px] text-amber-400">
+                            Featured
+                          </span>
+                        )}
+                      </div>
                       <div className="shrink-0 flex items-center gap-1 text-xs text-zinc-500">
                         <span>💬</span>
                         <span>{reviewCount}</span>

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import Groq from 'groq-sdk'
 import { checkAndGrantAchievements } from './achievements'
+import { isPremium } from '@/lib/subscription'
 
 const EXCLUDED = new Set(['node_modules', 'dist', '.next', 'build', 'out', '.git', 'coverage', '.turbo'])
 const ALLOWED_EXT = new Set(['js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rs', 'css', 'html', 'json', 'md'])
@@ -21,6 +22,9 @@ export async function generateAIReview(projectId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+
+  const premium = await isPremium(user.id)
+  if (!premium) throw new Error('PREMIUM_REQUIRED')
 
   const { data: project } = await supabase
     .from('projects')

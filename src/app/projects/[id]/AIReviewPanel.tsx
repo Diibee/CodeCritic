@@ -92,8 +92,11 @@ export default function AIReviewPanel({
       try {
         await generateAIReview(projectId)
         router.refresh()
-      } catch {
-        setError('Failed to generate review. Please try again.')
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : ''
+        setError(msg === 'PREMIUM_REQUIRED'
+          ? 'AI reviews are a Premium feature. Upgrade to unlock them.'
+          : 'Failed to generate review. Please try again.')
       }
     })
   }

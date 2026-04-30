@@ -2,10 +2,12 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
+import { isPremium } from '@/lib/subscription'
 import ReviewForm from './ReviewForm'
 import ProjectTabs from './ProjectTabs'
 import ProjectOwnerActions from './ProjectOwnerActions'
 import AIReviewPanel from './AIReviewPanel'
+import AnalyticsPanel, { computeAnalytics } from './AnalyticsPanel'
 
 export default async function ProjectPage({
   params,
@@ -17,7 +19,7 @@ export default async function ProjectPage({
 
   const { data: project } = await supabase
     .from('projects')
-    .select('*, ai_review, ai_review_at')
+    .select('*, ai_review, ai_review_at, is_featured')
     .eq('id', id)
     .single()
 
@@ -51,6 +53,9 @@ export default async function ProjectPage({
 
   const demoUrl: string | null = project.demo_url ?? null
   const githubUrl: string | null = project.github_url ?? null
+
+  // Premium status for owner (for analytics tab + featured toggle)
+  const ownerIsPremium = isOwner ? await isPremium(project.user_id) : false
 
   const overview = (
     <div className="space-y-6">
@@ -114,6 +119,10 @@ export default async function ProjectPage({
     </div>
   )
 
+  const analyticsNode = isOwner && ownerIsPremium ? (
+    <AnalyticsPanel analytics={computeAnalytics(reviews ?? [])} />
+  ) : undefined
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
@@ -128,6 +137,11 @@ export default async function ProjectPage({
           <div className="mb-4 flex items-start justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <h1 className="text-2xl font-bold text-white">{project.title}</h1>
+              {project.is_featured && (
+                <span className="shrink-0 rounded-full border border-amber-700/60 bg-amber-900/20 px-2.5 py-0.5 text-xs text-amber-400">
+                  Featured
+                </span>
+              )}
               {!project.is_public && (
                 <span className="shrink-0 rounded-full border border-yellow-800/60 bg-yellow-900/20 px-2.5 py-0.5 text-xs text-yellow-400">
                   Private
@@ -179,11 +193,13 @@ export default async function ProjectPage({
             <ProjectOwnerActions
               projectId={project.id}
               isPublic={project.is_public ?? true}
+              isFeatured={project.is_featured ?? false}
+              isPremium={ownerIsPremium}
             />
           )}
         </div>
 
-        {/* Tabs: Overview + AI Review + Preview */}
+        {/* Tabs: Overview + AI Review + Analytics + Preview */}
         <ProjectTabs
           githubUrl={githubUrl}
           demoUrl={demoUrl}
@@ -196,6 +212,7 @@ export default async function ProjectPage({
               reviewAt={project.ai_review_at ?? null}
             />
           }
+          analytics={analyticsNode}
         />
       </main>
     </div>
