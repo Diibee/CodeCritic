@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import MarkReadButton from './MarkReadButton'
+import DeleteAllButton from './DeleteAllButton'
 import NotificationLink from './NotificationLink'
 
 export default async function NotificationsPage() {
@@ -33,7 +34,10 @@ export default async function NotificationsPage() {
               </span>
             )}
           </h1>
-          {unreadCount > 0 && <MarkReadButton userId={user.id} />}
+          <div className="flex items-center gap-4">
+            {unreadCount > 0 && <MarkReadButton userId={user.id} />}
+            {items.length > 0 && <DeleteAllButton userId={user.id} />}
+          </div>
         </div>
 
         {items.length === 0 ? (
