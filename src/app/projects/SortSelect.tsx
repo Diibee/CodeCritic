@@ -40,7 +40,7 @@ export default function SortSelect({ current }: { current: SortValue }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
+        className="flex w-36 items-center justify-between gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
       >
         {currentLabel}
         <svg
