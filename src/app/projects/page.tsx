@@ -1,7 +1,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
+import SearchBar from './SearchBar'
+
+// Keep in sync with NewProjectForm TECH_OPTIONS
+const TECH_FILTERS = [
+  'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
+  'TypeScript', 'JavaScript', 'Python', 'Rust', 'Go',
+  'Node.js', 'Express', 'FastAPI', 'Django', 'Rails',
+  'Tailwind', 'CSS', 'SASS', 'Supabase', 'Firebase',
+  'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'AWS',
+]
 
 function getGitHubPreviewUrl(githubUrl: string | null): string | null {
   if (!githubUrl) return null
@@ -30,9 +41,9 @@ function Stars({ avg, count }: { avg: number | null; count: number }) {
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tech?: string }>
+  searchParams: Promise<{ tech?: string; q?: string }>
 }) {
-  const { tech } = await searchParams
+  const { tech, q } = await searchParams
   const supabase = await createClient()
 
   let query = supabase
@@ -46,6 +57,10 @@ export default async function ProjectsPage({
     query = query.contains('tech_stack', [tech])
   }
 
+  if (q?.trim()) {
+    query = query.or(`title.ilike.%${q.trim()}%,description.ilike.%${q.trim()}%`)
+  }
+
   const { data: projects } = await query
 
   return (
@@ -53,17 +68,28 @@ export default async function ProjectsPage({
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-white">Browse projects</h1>
-          <p className="text-zinc-500">
-            Discover what developers are building and share your feedback.
-          </p>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="mb-1 text-3xl font-bold text-white">Browse projects</h1>
+            <p className="text-zinc-500">Discover what developers are building and share your feedback.</p>
+          </div>
+          <Suspense>
+            <SearchBar />
+          </Suspense>
         </div>
+
+        {/* Active search label */}
+        {q && (
+          <p className="mb-4 text-sm text-zinc-500">
+            Results for <span className="text-white">"{q}"</span>
+            {tech && <> in <span className="text-violet-400">{tech}</span></>}
+          </p>
+        )}
 
         {/* Tech filter pills */}
         <div className="mb-8 flex flex-wrap gap-2">
           <Link
-            href="/projects"
+            href={q ? `/projects?q=${q}` : '/projects'}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               !tech
                 ? 'bg-violet-600 text-white'
@@ -72,10 +98,10 @@ export default async function ProjectsPage({
           >
             All
           </Link>
-          {techFilters.map((t) => (
+          {TECH_FILTERS.map((t) => (
             <Link
               key={t}
-              href={`/projects?tech=${t}`}
+              href={q ? `/projects?q=${q}&tech=${t}` : `/projects?tech=${t}`}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 tech === t
                   ? 'bg-violet-600 text-white'
@@ -90,10 +116,10 @@ export default async function ProjectsPage({
         {/* Grid */}
         {!projects || projects.length === 0 ? (
           <div className="py-20 text-center text-zinc-500">
-            No projects found. Be the first to{' '}
-            <Link href="/projects/new" className="text-violet-400 hover:underline">
-              submit one!
-            </Link>
+            {q
+              ? <>No projects found for "{q}". <Link href="/projects" className="text-violet-400 hover:underline">Clear search</Link></>
+              : <>No projects found. Be the first to <Link href="/projects/new" className="text-violet-400 hover:underline">submit one!</Link></>
+            }
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -176,8 +202,3 @@ export default async function ProjectsPage({
     </div>
   )
 }
-
-const techFilters = [
-  'React', 'Next.js', 'Vue', 'TypeScript', 'Python',
-  'Node.js', 'Tailwind', 'Supabase', 'PostgreSQL',
-]
