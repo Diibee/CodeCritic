@@ -52,6 +52,14 @@ export default function NavbarClient({
 
   return (
     <div className="flex items-center gap-4">
+      {/* Profile */}
+      <Link
+        href={`/u/${user.id}`}
+        className="text-sm text-zinc-400 hover:text-white transition-colors"
+      >
+        Profile
+      </Link>
+
       {/* Notification bell */}
       <Link
         href="/notifications"
@@ -64,14 +72,6 @@ export default function NavbarClient({
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
-      </Link>
-
-      {/* Profile */}
-      <Link
-        href={`/u/${user.id}`}
-        className="text-sm text-zinc-400 hover:text-white transition-colors"
-      >
-        Profile
       </Link>
 
       {/* Settings */}
