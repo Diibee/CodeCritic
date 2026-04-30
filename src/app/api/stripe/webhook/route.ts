@@ -42,12 +42,12 @@ export async function POST(request: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
       if (session.mode === 'subscription' && session.subscription) {
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as unknown as Stripe.Subscription
         await upsertSubscription(
           session.customer as string,
           subscription.id,
           'active',
-          subscription.current_period_end,
+          (subscription as unknown as Record<string, number>)['current_period_end'] ?? null,
         )
       }
       break
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         subscription.customer as string,
         subscription.id,
         status,
-        subscription.current_period_end,
+        (subscription as unknown as Record<string, number>)['current_period_end'] ?? null,
       )
       break
     }
