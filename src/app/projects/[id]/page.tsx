@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
+import { getStackBlitzEmbedUrl } from '@/lib/github'
 import ReviewForm from './ReviewForm'
+import ProjectTabs from './ProjectTabs'
 
 export default async function ProjectPage({
   params,
@@ -22,7 +24,7 @@ export default async function ProjectPage({
 
   const { data: reviews } = await supabase
     .from('reviews')
-    .select('*, reviewer:reviewer_id(email, raw_user_meta_data)')
+    .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
@@ -33,12 +35,64 @@ export default async function ProjectPage({
       ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
       : null
 
+  const embedUrl = project.github_url
+    ? getStackBlitzEmbedUrl(project.github_url)
+    : null
+
+  const overview = (
+    <div className="space-y-6">
+      {/* Reviews section */}
+      <div>
+        <h2 className="mb-6 text-xl font-semibold text-white">
+          Reviews{' '}
+          <span className="text-zinc-600 font-normal">({reviews?.length ?? 0})</span>
+        </h2>
+
+        {user && user.id !== project.user_id && (
+          <ReviewForm projectId={id} userId={user.id} />
+        )}
+
+        {!user && (
+          <div className="mb-8 rounded-xl border border-dashed border-zinc-800 p-6 text-center">
+            <p className="text-zinc-500">
+              <Link href="/login" className="text-violet-400 hover:underline">Sign in</Link>
+              {' '}to leave a review.
+            </p>
+          </div>
+        )}
+
+        {reviews && reviews.length > 0 ? (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-zinc-300">Anonymous reviewer</span>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} className={i < review.rating ? 'text-yellow-400' : 'text-zinc-700'}>
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-400 leading-relaxed">{review.comment}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-12 text-center text-zinc-600">
+            No reviews yet. Be the first to review this project!
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
 
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Back */}
         <Link href="/projects" className="mb-6 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-white transition-colors">
           ← Back to projects
         </Link>
@@ -57,19 +111,14 @@ export default async function ProjectPage({
 
           <p className="mb-6 text-zinc-400 leading-relaxed">{project.description}</p>
 
-          {/* Tech stack */}
           <div className="mb-6 flex flex-wrap gap-2">
             {(project.tech_stack ?? []).map((tech: string) => (
-              <span
-                key={tech}
-                className="rounded-full bg-zinc-800 px-3 py-1 text-sm text-zinc-300"
-              >
+              <span key={tech} className="rounded-full bg-zinc-800 px-3 py-1 text-sm text-zinc-300">
                 {tech}
               </span>
             ))}
           </div>
 
-          {/* Links */}
           <div className="flex gap-4">
             {project.github_url && (
               <a
@@ -94,60 +143,8 @@ export default async function ProjectPage({
           </div>
         </div>
 
-        {/* Reviews section */}
-        <div>
-          <h2 className="mb-6 text-xl font-semibold text-white">
-            Reviews{' '}
-            <span className="text-zinc-600 font-normal">({reviews?.length ?? 0})</span>
-          </h2>
-
-          {/* Leave a review */}
-          {user && user.id !== project.user_id && (
-            <ReviewForm projectId={id} userId={user.id} />
-          )}
-
-          {!user && (
-            <div className="mb-8 rounded-xl border border-dashed border-zinc-800 p-6 text-center">
-              <p className="text-zinc-500">
-                <Link href="/login" className="text-violet-400 hover:underline">Sign in</Link>
-                {' '}to leave a review.
-              </p>
-            </div>
-          )}
-
-          {/* Reviews list */}
-          {reviews && reviews.length > 0 ? (
-            <div className="space-y-4">
-              {reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-medium text-zinc-300">
-                      Anonymous reviewer
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className={i < review.rating ? 'text-yellow-400' : 'text-zinc-700'}
-                        >
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-zinc-400 leading-relaxed">{review.comment}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center text-zinc-600">
-              No reviews yet. Be the first to review this project!
-            </div>
-          )}
-        </div>
+        {/* Tabs: Overview + Run */}
+        <ProjectTabs embedUrl={embedUrl} overview={overview} />
       </main>
     </div>
   )
