@@ -3,25 +3,24 @@
 import { useState } from 'react'
 import RunEmbed from './RunEmbed'
 
-type Tab = 'overview' | 'run'
+type Tab = 'overview' | 'preview'
 
 interface Props {
-  embedUrl: string | null
+  demoUrl: string | null
   overview: React.ReactNode
 }
 
-export default function ProjectTabs({ embedUrl, overview }: Props) {
+export default function ProjectTabs({ demoUrl, overview }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
 
   return (
     <div>
-      {/* Tab bar */}
       <div className="mb-6 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1 w-fit">
         <TabButton active={tab === 'overview'} onClick={() => setTab('overview')}>
           Overview
         </TabButton>
-        {embedUrl && (
-          <TabButton active={tab === 'run'} onClick={() => setTab('run')}>
+        {demoUrl && (
+          <TabButton active={tab === 'preview'} onClick={() => setTab('preview')}>
             <span className="flex items-center gap-1.5">
               <span className="text-green-400">▶</span> Preview
             </span>
@@ -29,9 +28,8 @@ export default function ProjectTabs({ embedUrl, overview }: Props) {
         )}
       </div>
 
-      {/* Content */}
       {tab === 'overview' && overview}
-      {tab === 'run' && embedUrl && <RunEmbed embedUrl={embedUrl} />}
+      {tab === 'preview' && demoUrl && <RunEmbed demoUrl={demoUrl} />}
     </div>
   )
 }

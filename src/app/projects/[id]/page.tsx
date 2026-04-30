@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
-import { getStackBlitzEmbedUrl } from '@/lib/github'
 import ReviewForm from './ReviewForm'
 import ProjectTabs from './ProjectTabs'
 
@@ -35,9 +34,7 @@ export default async function ProjectPage({
       ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
       : null
 
-  const embedUrl = project.github_url
-    ? getStackBlitzEmbedUrl(project.github_url)
-    : null
+  const demoUrl: string | null = project.demo_url ?? null
 
   const overview = (
     <div className="space-y-6">
@@ -143,8 +140,8 @@ export default async function ProjectPage({
           </div>
         </div>
 
-        {/* Tabs: Overview + Run */}
-        <ProjectTabs embedUrl={embedUrl} overview={overview} />
+        {/* Tabs: Overview + Preview */}
+        <ProjectTabs demoUrl={demoUrl} overview={overview} />
       </main>
     </div>
   )
