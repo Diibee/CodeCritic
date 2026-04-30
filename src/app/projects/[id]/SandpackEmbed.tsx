@@ -8,6 +8,32 @@ import {
 
 type Template = 'react' | 'react-ts' | 'vue' | 'vanilla' | 'static'
 
+// CDN replacements for common large local libraries
+const CDN_REPLACEMENTS: [RegExp, string][] = [
+  [/src=["'][^"']*\bp5\.min\.js["']/g,       'src="https://cdn.jsdelivr.net/npm/p5/lib/p5.min.js"'],
+  [/src=["'][^"']*\bp5\.js["']/g,            'src="https://cdn.jsdelivr.net/npm/p5/lib/p5.js"'],
+  [/src=["'][^"']*\bp5\.sound\.min\.js["']/g,'src="https://cdn.jsdelivr.net/npm/p5/lib/addons/p5.sound.min.js"'],
+  [/src=["'][^"']*\bp5\.sound\.js["']/g,     'src="https://cdn.jsdelivr.net/npm/p5/lib/addons/p5.sound.js"'],
+  [/src=["'][^"']*\bthree\.min\.js["']/g,    'src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"'],
+  [/src=["'][^"']*\bthree\.js["']/g,         'src="https://cdn.jsdelivr.net/npm/three/build/three.js"'],
+]
+
+function patchFiles(files: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [path, content] of Object.entries(files)) {
+    if (path.endsWith('.html')) {
+      let patched = content
+      for (const [pattern, replacement] of CDN_REPLACEMENTS) {
+        patched = patched.replace(pattern, replacement)
+      }
+      result[path] = patched
+    } else {
+      result[path] = content
+    }
+  }
+  return result
+}
+
 function detectTemplate(files: Record<string, string>): Template {
   const pkg = files['/package.json']
   if (!pkg) return 'static'
@@ -15,13 +41,13 @@ function detectTemplate(files: Record<string, string>): Template {
     const json = JSON.parse(pkg) as { dependencies?: Record<string, string> }
     const deps = Object.keys(json.dependencies ?? {})
     if (deps.includes('react') || deps.includes('react-dom')) {
-      return deps.includes('typescript') || files['/tsconfig.json'] ? 'react-ts' : 'react'
+      return deps.includes('typescript') || !!files['/tsconfig.json'] ? 'react-ts' : 'react'
     }
     if (deps.includes('vue')) return 'vue'
+    return 'vanilla'
   } catch {
-    // ignore parse errors
+    return 'static'
   }
-  return 'vanilla'
 }
 
 export default function SandpackEmbed({ githubUrl }: { githubUrl: string }) {
@@ -40,7 +66,7 @@ export default function SandpackEmbed({ githubUrl }: { githubUrl: string }) {
         } else if (data.files && Object.keys(data.files).length === 0) {
           setError('No supported source files found in this repository.')
         } else {
-          setFiles(data.files ?? null)
+          setFiles(patchFiles(data.files ?? {}))
         }
       })
       .catch(() => setError('Failed to fetch repository files.'))
