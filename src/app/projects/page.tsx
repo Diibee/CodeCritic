@@ -4,6 +4,8 @@ import { Suspense } from 'react'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import SearchBar from './SearchBar'
+import SortSelect from './SortSelect'
+import type { SortValue } from './SortSelect'
 
 // Keep in sync with NewProjectForm TECH_OPTIONS
 const TECH_FILTERS = [
@@ -38,30 +40,65 @@ function Stars({ avg, count }: { avg: number | null; count: number }) {
   )
 }
 
+const VALID_SORTS = ['newest', 'trending', 'top_rated', 'most_discussed', 'oldest'] as const
+
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tech?: string; q?: string }>
+  searchParams: Promise<{ tech?: string; q?: string; sort?: string }>
 }) {
-  const { tech, q } = await searchParams
+  const { tech, q, sort: sortParam } = await searchParams
+  const sort: SortValue = (VALID_SORTS as readonly string[]).includes(sortParam ?? '')
+    ? (sortParam as SortValue)
+    : 'newest'
+
   const supabase = await createClient()
 
   let query = supabase
     .from('projects')
-    .select('*, reviews(rating)')
+    .select('*, reviews(rating, created_at)')
     .eq('is_public', true)
-    .order('created_at', { ascending: false })
-    .limit(24)
 
-  if (tech) {
-    query = query.contains('tech_stack', [tech])
+  if (tech) query = query.contains('tech_stack', [tech])
+  if (q?.trim()) query = query.or(`title.ilike.%${q.trim()}%,description.ilike.%${q.trim()}%`)
+
+  if (sort === 'newest') query = query.order('created_at', { ascending: false }).limit(24)
+  if (sort === 'oldest') query = query.order('created_at', { ascending: true }).limit(24)
+
+  const { data: raw } = await query
+
+  type Review = { rating: number; created_at: string }
+  type Project = NonNullable<typeof raw>[number]
+  let projects: Project[] = raw ?? []
+
+  const TRENDING_WINDOW_MS = 72 * 60 * 60 * 1000
+  const cutoff = Date.now() - TRENDING_WINDOW_MS
+
+  if (sort === 'trending') {
+    projects = projects
+      .sort((a, b) => {
+        const recentA = ((a.reviews ?? []) as Review[]).filter(r => new Date(r.created_at).getTime() > cutoff).length
+        const recentB = ((b.reviews ?? []) as Review[]).filter(r => new Date(r.created_at).getTime() > cutoff).length
+        return recentB - recentA
+      })
+      .slice(0, 24)
   }
 
-  if (q?.trim()) {
-    query = query.or(`title.ilike.%${q.trim()}%,description.ilike.%${q.trim()}%`)
+  if (sort === 'top_rated') {
+    projects = projects
+      .sort((a, b) => {
+        const avg = (reviews: Review[]) =>
+          reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0
+        return avg((b.reviews ?? []) as Review[]) - avg((a.reviews ?? []) as Review[])
+      })
+      .slice(0, 24)
   }
 
-  const { data: projects } = await query
+  if (sort === 'most_discussed') {
+    projects = projects
+      .sort((a, b) => (b.reviews?.length ?? 0) - (a.reviews?.length ?? 0))
+      .slice(0, 24)
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -73,9 +110,14 @@ export default async function ProjectsPage({
             <h1 className="mb-1 text-3xl font-bold text-white">Browse projects</h1>
             <p className="text-zinc-500">Discover what developers are building and share your feedback.</p>
           </div>
-          <Suspense>
-            <SearchBar />
-          </Suspense>
+          <div className="flex items-center gap-2">
+            <Suspense>
+              <SearchBar />
+            </Suspense>
+            <Suspense>
+              <SortSelect current={sort} />
+            </Suspense>
+          </div>
         </div>
 
         {/* Tech filter pills */}
