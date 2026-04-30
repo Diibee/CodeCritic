@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import SettingsForm from './SettingsForm'
+import type { UserIdentity } from '@supabase/supabase-js'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -15,8 +16,8 @@ export default async function SettingsPage() {
     .eq('id', user.id)
     .single()
 
-  const { data: identities } = await supabase.auth.getUserIdentities()
-  const hasGithub = identities?.identities?.some((i) => i.provider === 'github') ?? false
+  const { data: identitiesData } = await supabase.auth.getUserIdentities()
+  const identities: UserIdentity[] = identitiesData?.identities ?? []
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -36,7 +37,7 @@ export default async function SettingsPage() {
           initialDisplayName={profile?.full_name ?? user.user_metadata?.full_name ?? ''}
           initialBio={profile?.bio ?? ''}
           initialAvatarUrl={profile?.avatar_url ?? user.user_metadata?.avatar_url ?? ''}
-          hasGithub={hasGithub}
+          identities={identities}
         />
       </main>
     </div>

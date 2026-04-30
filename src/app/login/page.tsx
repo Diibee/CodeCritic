@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-type Mode = 'signin' | 'signup'
+type Mode = 'signin' | 'signup' | 'forgot'
 
 function validatePassword(pw: string) {
   return {
@@ -26,11 +26,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [emailSent, setEmailSent] = useState(false)
+  const [emailSentLabel, setEmailSentLabel] = useState('')
   const router = useRouter()
 
   const pwChecks = validatePassword(password)
   const pwValid = Object.values(pwChecks).every(Boolean)
   const passwordsMatch = password === confirmPassword
+
+  function switchMode(m: Mode) {
+    setMode(m)
+    setError('')
+    setEmailSent(false)
+  }
 
   async function handleOAuth(provider: 'google' | 'github' | 'discord') {
     const supabase = createClient()
@@ -64,6 +71,7 @@ export default function LoginPage() {
       })
       setLoading(false)
       if (err) { setError(err.message); return }
+      setEmailSentLabel('We sent a confirmation link to')
       setEmailSent(true)
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
@@ -74,6 +82,21 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!email.trim()) { setError('Enter your email address.'); return }
+    setLoading(true)
+    const supabase = createClient()
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/settings`,
+    })
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    setEmailSentLabel('We sent a password reset link to')
+    setEmailSent(true)
+  }
+
   if (emailSent) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
@@ -81,8 +104,7 @@ export default function LoginPage() {
           <div className="mb-4 text-4xl">📬</div>
           <h1 className="mb-2 text-xl font-bold text-white">Check your email</h1>
           <p className="text-sm text-zinc-400">
-            We sent a confirmation link to <span className="text-white">{email}</span>.
-            Click it to activate your account.
+            {emailSentLabel} <span className="text-white">{email}</span>.
           </p>
           <Link href="/" className="mt-6 inline-block text-sm text-violet-400 hover:underline">
             Back to home
@@ -102,136 +124,177 @@ export default function LoginPage() {
             Code<span className="text-violet-500">Critic</span>
           </Link>
           <p className="mt-2 text-sm text-zinc-500">
-            {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
+            {mode === 'signin' ? 'Sign in to your account'
+              : mode === 'signup' ? 'Create your account'
+              : 'Reset your password'}
           </p>
         </div>
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
 
-          {/* Mode toggle */}
-          <div className="mb-6 flex rounded-xl border border-zinc-800 bg-zinc-800/50 p-1">
-            {(['signin', 'signup'] as Mode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => { setMode(m); setError('') }}
-                className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-                  mode === m
-                    ? 'bg-zinc-700 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >
-                {m === 'signin' ? 'Sign in' : 'Sign up'}
-              </button>
-            ))}
-          </div>
+          {/* Mode toggle — only signin/signup */}
+          {mode !== 'forgot' && (
+            <div className="mb-6 flex rounded-xl border border-zinc-800 bg-zinc-800/50 p-1">
+              {(['signin', 'signup'] as Mode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchMode(m)}
+                  className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                    mode === m ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {m === 'signin' ? 'Sign in' : 'Sign up'}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Email/password form */}
-          <form onSubmit={handleEmailAuth} className="space-y-3">
-
-            {/* Nickname — signup only */}
-            {mode === 'signup' && (
+          {/* Forgot password form */}
+          {mode === 'forgot' ? (
+            <form onSubmit={handleForgotPassword} className="space-y-3">
               <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Nickname"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
                 required
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
               />
-            )}
-
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              required
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
-            />
-
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                required
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 pr-11 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
-              />
+              {error && (
+                <p className="rounded-lg bg-red-900/20 px-3 py-2 text-xs text-red-400">{error}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-full bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-40"
+              >
+                {loading ? '...' : 'Send reset link'}
+              </button>
               <button
                 type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                tabIndex={-1}
+                onClick={() => switchMode('signin')}
+                className="w-full text-center text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
               >
-                {showPassword ? '🙈' : '👁'}
+                ← Back to sign in
               </button>
-            </div>
+            </form>
+          ) : (
+            /* Sign in / Sign up form */
+            <form onSubmit={handleEmailAuth} className="space-y-3">
 
-            {/* Confirm password — signup only */}
-            {mode === 'signup' && (
+              {mode === 'signup' && (
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Nickname"
+                  required
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
+                />
+              )}
+
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                required
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
+              />
+
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
                   required
-                  className={`w-full rounded-xl border bg-zinc-800 px-4 py-2.5 pr-11 text-sm text-white placeholder-zinc-600 focus:outline-none ${
-                    confirmPassword.length > 0 && !passwordsMatch
-                      ? 'border-red-600 focus:border-red-500'
-                      : 'border-zinc-700 focus:border-violet-500'
-                  }`}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 pr-11 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
                 />
-                {confirmPassword.length > 0 && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
-                    {passwordsMatch ? '✓' : '✗'}
-                  </span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  tabIndex={-1}
+                >
+                  {showPassword ? '🙈' : '👁'}
+                </button>
               </div>
-            )}
 
-            {/* Password requirements — signup only */}
-            {mode === 'signup' && password.length > 0 && (
-              <ul className="space-y-1 rounded-xl bg-zinc-800/50 px-4 py-3 text-xs">
-                <Req ok={pwChecks.length} label="At least 8 characters" />
-                <Req ok={pwChecks.uppercase} label="At least 1 uppercase letter" />
-                <Req ok={pwChecks.number} label="At least 1 number" />
-                <Req ok={pwChecks.special} label="At least 1 special character (!@#$…)" />
-              </ul>
-            )}
+              {/* Forgot password link — signin only */}
+              {mode === 'signin' && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot')}
+                    className="text-xs text-zinc-500 hover:text-violet-400 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
 
-            {error && (
-              <p className="rounded-lg bg-red-900/20 px-3 py-2 text-xs text-red-400">{error}</p>
-            )}
+              {mode === 'signup' && (
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm password"
+                    required
+                    className={`w-full rounded-xl border bg-zinc-800 px-4 py-2.5 pr-11 text-sm text-white placeholder-zinc-600 focus:outline-none ${
+                      confirmPassword.length > 0 && !passwordsMatch
+                        ? 'border-red-600 focus:border-red-500'
+                        : 'border-zinc-700 focus:border-violet-500'
+                    }`}
+                  />
+                  {confirmPassword.length > 0 && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                      {passwordsMatch ? '✓' : '✗'}
+                    </span>
+                  )}
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-full bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-40"
-            >
-              {loading
-                ? '...'
-                : mode === 'signin'
-                ? 'Sign in'
-                : 'Create account'}
-            </button>
-          </form>
+              {mode === 'signup' && password.length > 0 && (
+                <ul className="space-y-1 rounded-xl bg-zinc-800/50 px-4 py-3 text-xs">
+                  <Req ok={pwChecks.length} label="At least 8 characters" />
+                  <Req ok={pwChecks.uppercase} label="At least 1 uppercase letter" />
+                  <Req ok={pwChecks.number} label="At least 1 number" />
+                  <Req ok={pwChecks.special} label="At least 1 special character (!@#$…)" />
+                </ul>
+              )}
 
-          {/* Divider */}
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-zinc-800" />
-            <span className="text-xs text-zinc-600">or continue with</span>
-            <div className="h-px flex-1 bg-zinc-800" />
-          </div>
+              {error && (
+                <p className="rounded-lg bg-red-900/20 px-3 py-2 text-xs text-red-400">{error}</p>
+              )}
 
-          {/* OAuth buttons */}
-          <div className="space-y-2.5">
-            <OAuthButton onClick={() => handleOAuth('google')} icon={<GoogleIcon />} label="Google" />
-            <OAuthButton onClick={() => handleOAuth('github')} icon={<GithubIcon />} label="GitHub" />
-            <OAuthButton onClick={() => handleOAuth('discord')} icon={<DiscordIcon />} label="Discord" />
-          </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-full bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-40"
+              >
+                {loading ? '...' : mode === 'signin' ? 'Sign in' : 'Create account'}
+              </button>
+            </form>
+          )}
+
+          {/* OAuth — not on forgot */}
+          {mode !== 'forgot' && (
+            <>
+              <div className="my-5 flex items-center gap-3">
+                <div className="h-px flex-1 bg-zinc-800" />
+                <span className="text-xs text-zinc-600">or continue with</span>
+                <div className="h-px flex-1 bg-zinc-800" />
+              </div>
+              <div className="space-y-2.5">
+                <OAuthButton onClick={() => handleOAuth('google')} icon={<GoogleIcon />} label="Google" />
+                <OAuthButton onClick={() => handleOAuth('github')} icon={<GithubIcon />} label="GitHub" />
+                <OAuthButton onClick={() => handleOAuth('discord')} icon={<DiscordIcon />} label="Discord" />
+              </div>
+            </>
+          )}
 
           <p className="mt-5 text-center text-xs text-zinc-600">
             By continuing you agree to our{' '}
