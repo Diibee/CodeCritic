@@ -19,8 +19,6 @@ export default function SortSelect({ current }: { current: SortValue }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  const currentLabel = SORT_OPTIONS.find((o) => o.value === current)?.label ?? 'Newest'
-
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -40,9 +38,13 @@ export default function SortSelect({ current }: { current: SortValue }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-48 items-center justify-between gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
+        className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-300 hover:border-zinc-500 hover:text-white transition-colors"
       >
-        {currentLabel}
+        {/* Sort icon */}
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
+          <path d="M2 4h10M4 7h6M6 10h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        <span>Sort</span>
         <svg
           width="12"
           height="12"
@@ -60,13 +62,18 @@ export default function SortSelect({ current }: { current: SortValue }) {
             <button
               key={o.value}
               onClick={() => select(o.value)}
-              className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors ${
                 o.value === current
                   ? 'bg-violet-600/20 text-violet-300'
                   : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
               }`}
             >
               {o.label}
+              {o.value === current && (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0">
+                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
             </button>
           ))}
         </div>
