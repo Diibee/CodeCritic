@@ -4,9 +4,8 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 export default function LoginPage() {
-  const supabase = createClient()
-
   async function handleGoogleSignIn() {
+    const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
