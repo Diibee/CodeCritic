@@ -3,15 +3,16 @@
 import { useState } from 'react'
 import RunEmbed from './RunEmbed'
 
-type Tab = 'overview' | 'preview'
+type Tab = 'overview' | 'ai_review' | 'preview'
 
 interface Props {
   githubUrl: string | null
   demoUrl: string | null
   overview: React.ReactNode
+  aiReview: React.ReactNode
 }
 
-export default function ProjectTabs({ githubUrl, demoUrl, overview }: Props) {
+export default function ProjectTabs({ githubUrl, demoUrl, overview, aiReview }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
 
   const hasPreview = !!(githubUrl || demoUrl)
@@ -21,6 +22,11 @@ export default function ProjectTabs({ githubUrl, demoUrl, overview }: Props) {
       <div className="mb-6 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-900 p-1 w-fit">
         <TabButton active={tab === 'overview'} onClick={() => setTab('overview')}>
           Overview
+        </TabButton>
+        <TabButton active={tab === 'ai_review'} onClick={() => setTab('ai_review')}>
+          <span className="flex items-center gap-1.5">
+            <span>✨</span> AI Review
+          </span>
         </TabButton>
         {hasPreview && (
           <TabButton active={tab === 'preview'} onClick={() => setTab('preview')}>
@@ -32,6 +38,7 @@ export default function ProjectTabs({ githubUrl, demoUrl, overview }: Props) {
       </div>
 
       {tab === 'overview' && overview}
+      {tab === 'ai_review' && aiReview}
       {tab === 'preview' && hasPreview && (
         <RunEmbed githubUrl={githubUrl} demoUrl={demoUrl} />
       )}

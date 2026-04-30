@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import ReviewForm from './ReviewForm'
 import ProjectTabs from './ProjectTabs'
 import ProjectOwnerActions from './ProjectOwnerActions'
+import AIReviewPanel from './AIReviewPanel'
 
 export default async function ProjectPage({
   params,
@@ -16,7 +17,7 @@ export default async function ProjectPage({
 
   const { data: project } = await supabase
     .from('projects')
-    .select('*')
+    .select('*, ai_review, ai_review_at')
     .eq('id', id)
     .single()
 
@@ -182,8 +183,20 @@ export default async function ProjectPage({
           )}
         </div>
 
-        {/* Tabs: Overview + Preview */}
-        <ProjectTabs githubUrl={githubUrl} demoUrl={demoUrl} overview={overview} />
+        {/* Tabs: Overview + AI Review + Preview */}
+        <ProjectTabs
+          githubUrl={githubUrl}
+          demoUrl={demoUrl}
+          overview={overview}
+          aiReview={
+            <AIReviewPanel
+              projectId={id}
+              isOwner={isOwner}
+              initialReview={project.ai_review ?? null}
+              reviewAt={project.ai_review_at ?? null}
+            />
+          }
+        />
       </main>
     </div>
   )
