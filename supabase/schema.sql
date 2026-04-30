@@ -51,6 +51,7 @@ create table if not exists public.projects (
   tech_stack text[] default '{}',
   github_url text,
   demo_url text,
+  is_public boolean default true not null,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
@@ -58,7 +59,9 @@ create table if not exists public.projects (
 alter table public.projects enable row level security;
 
 create policy "Projects are viewable by everyone"
-  on public.projects for select using (true);
+  on public.projects for select using (
+    is_public = true or auth.uid() = user_id
+  );
 
 create policy "Users can insert their own projects"
   on public.projects for insert with check (auth.uid() = user_id);

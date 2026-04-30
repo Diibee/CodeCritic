@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import ReviewForm from './ReviewForm'
 import ProjectTabs from './ProjectTabs'
+import ProjectOwnerActions from './ProjectOwnerActions'
 
 export default async function ProjectPage({
   params,
@@ -21,13 +22,17 @@ export default async function ProjectPage({
 
   if (!project) notFound()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const isOwner = user?.id === project.user_id
+
+  // Private projects are only visible to their owner
+  if (!project.is_public && !isOwner) notFound()
+
   const { data: reviews } = await supabase
     .from('reviews')
     .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
-
-  const { data: { user } } = await supabase.auth.getUser()
 
   const avgRating =
     reviews && reviews.length > 0
@@ -98,7 +103,14 @@ export default async function ProjectPage({
         {/* Project header */}
         <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
           <div className="mb-4 flex items-start justify-between gap-4">
-            <h1 className="text-2xl font-bold text-white">{project.title}</h1>
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-2xl font-bold text-white">{project.title}</h1>
+              {!project.is_public && (
+                <span className="shrink-0 rounded-full border border-yellow-800/60 bg-yellow-900/20 px-2.5 py-0.5 text-xs text-yellow-400">
+                  Private
+                </span>
+              )}
+            </div>
             {avgRating && (
               <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-violet-600/20 px-3 py-1 text-sm text-violet-300">
                 <span>⭐</span>
@@ -139,6 +151,13 @@ export default async function ProjectPage({
               </a>
             )}
           </div>
+
+          {isOwner && (
+            <ProjectOwnerActions
+              projectId={project.id}
+              isPublic={project.is_public ?? true}
+            />
+          )}
         </div>
 
         {/* Tabs: Overview + Preview */}
