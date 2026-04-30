@@ -101,3 +101,76 @@ create policy "Users can update their own reviews"
 
 create policy "Users can delete their own reviews"
   on public.reviews for delete using (auth.uid() = reviewer_id);
+
+-- ===========================
+-- NOTIFICATIONS
+-- ===========================
+create table if not exists public.notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  type text not null,
+  message text not null,
+  link text,
+  read boolean default false not null,
+  created_at timestamptz default now() not null
+);
+
+alter table public.notifications enable row level security;
+
+create policy "Users can read own notifications"
+  on public.notifications for select using (auth.uid() = user_id);
+
+create policy "Users can update own notifications"
+  on public.notifications for update using (auth.uid() = user_id);
+
+create policy "Users can delete own notifications"
+  on public.notifications for delete using (auth.uid() = user_id);
+
+create policy "Service role can insert notifications"
+  on public.notifications for insert with check (true);
+
+-- ===========================
+-- USER ACHIEVEMENTS
+-- ===========================
+create table if not exists public.user_achievements (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  achievement_key text not null,
+  unlocked_at timestamptz default now() not null,
+  unique (user_id, achievement_key)
+);
+
+alter table public.user_achievements enable row level security;
+
+create policy "Achievements are viewable by everyone"
+  on public.user_achievements for select using (true);
+
+create policy "Service role can insert achievements"
+  on public.user_achievements for insert with check (true);
+
+-- ===========================
+-- SUBSCRIPTIONS
+-- ===========================
+create table if not exists public.subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null unique,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  status text not null default 'inactive',
+  current_period_end timestamptz,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+alter table public.subscriptions enable row level security;
+
+create policy "Users can read own subscription"
+  on public.subscriptions for select using (auth.uid() = user_id);
+
+-- ===========================
+-- PROJECTS — extra columns
+-- ===========================
+alter table public.projects
+  add column if not exists ai_review text,
+  add column if not exists ai_review_at timestamptz,
+  add column if not exists is_featured boolean default false not null;
