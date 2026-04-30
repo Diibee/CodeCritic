@@ -35,6 +35,7 @@ export default async function ProjectPage({
       : null
 
   const demoUrl: string | null = project.demo_url ?? null
+  const githubUrl: string | null = project.github_url ?? null
 
   const overview = (
     <div className="space-y-6">
@@ -141,7 +142,7 @@ export default async function ProjectPage({
         </div>
 
         {/* Tabs: Overview + Preview */}
-        <ProjectTabs demoUrl={demoUrl} overview={overview} />
+        <ProjectTabs githubUrl={githubUrl} demoUrl={demoUrl} overview={overview} />
       </main>
     </div>
   )
