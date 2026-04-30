@@ -34,6 +34,12 @@ export default function NavbarClient({ user }: { user: User | null }) {
       >
         + Submit project
       </Link>
+      <Link
+        href="/settings"
+        className="text-sm text-zinc-400 hover:text-white transition-colors"
+      >
+        Settings
+      </Link>
       <button
         onClick={handleSignOut}
         className="text-sm text-zinc-400 hover:text-white transition-colors"
