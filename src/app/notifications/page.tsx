@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import MarkReadButton from './MarkReadButton'
+import NotificationLink from './NotificationLink'
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -45,14 +45,11 @@ export default async function NotificationsPage() {
             {items.map((n) => {
               const project = (n as { projects?: { id: string; title: string } | null }).projects
               return (
-                <Link
+                <NotificationLink
                   key={n.id}
-                  href={`/projects/${n.project_id}`}
-                  className={`flex items-start gap-3 rounded-2xl border p-4 transition-colors hover:border-zinc-600 ${
-                    n.read
-                      ? 'border-zinc-800 bg-zinc-900/40'
-                      : 'border-zinc-700 bg-zinc-900'
-                  }`}
+                  id={n.id}
+                  projectId={n.project_id}
+                  read={n.read}
                 >
                   <span
                     className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
@@ -76,7 +73,7 @@ export default async function NotificationsPage() {
                       })}
                     </p>
                   </div>
-                </Link>
+                </NotificationLink>
               )
             })}
           </div>
