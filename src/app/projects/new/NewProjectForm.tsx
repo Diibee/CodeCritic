@@ -12,7 +12,18 @@ const TECH_OPTIONS = [
   'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'AWS',
 ]
 
-export default function NewProjectForm({ userId }: { userId: string }) {
+function extractGithubOwner(url: string): string | null {
+  const match = url.trim().match(/github\.com\/([^/?#\s]+)\//)
+  return match ? match[1] : null
+}
+
+export default function NewProjectForm({
+  userId,
+  githubUsername,
+}: {
+  userId: string
+  githubUsername: string
+}) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [githubUrl, setGithubUrl] = useState('')
@@ -21,6 +32,16 @@ export default function NewProjectForm({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  const urlOwner = extractGithubOwner(githubUrl)
+  const ownerMismatch =
+    githubUrl.trim().length > 0 &&
+    urlOwner !== null &&
+    urlOwner.toLowerCase() !== githubUsername.toLowerCase()
+  const ownerOk =
+    githubUrl.trim().length > 0 &&
+    urlOwner !== null &&
+    urlOwner.toLowerCase() === githubUsername.toLowerCase()
 
   function toggleTech(tech: string) {
     setSelectedTech((prev) =>
@@ -37,6 +58,16 @@ export default function NewProjectForm({ userId }: { userId: string }) {
       return
     }
 
+    if (!githubUrl.trim()) {
+      setError('GitHub URL is required.')
+      return
+    }
+
+    if (ownerMismatch) {
+      setError(`This repository doesn't belong to your GitHub account (@${githubUsername}).`)
+      return
+    }
+
     setLoading(true)
     const supabase = createClient()
 
@@ -46,7 +77,7 @@ export default function NewProjectForm({ userId }: { userId: string }) {
         user_id: userId,
         title: title.trim(),
         description: description.trim(),
-        github_url: githubUrl.trim() || null,
+        github_url: githubUrl.trim(),
         demo_url: demoUrl.trim() || null,
         tech_stack: selectedTech,
       })
@@ -65,6 +96,17 @@ export default function NewProjectForm({ userId }: { userId: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
+      {/* GitHub account badge */}
+      <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-white">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z" />
+        </svg>
+        <span className="text-zinc-400">Submitting as</span>
+        <span className="font-medium text-white">@{githubUsername}</span>
+        <span className="ml-auto text-xs text-zinc-600">Only your repos are accepted</span>
+      </div>
+
       {/* Title */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-zinc-300">
@@ -97,9 +139,7 @@ export default function NewProjectForm({ userId }: { userId: string }) {
 
       {/* Tech stack */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-zinc-300">
-          Tech stack
-        </label>
+        <label className="mb-1.5 block text-sm font-medium text-zinc-300">Tech stack</label>
         <div className="flex flex-wrap gap-2">
           {TECH_OPTIONS.map((tech) => (
             <button
@@ -122,20 +162,42 @@ export default function NewProjectForm({ userId }: { userId: string }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-300">
-            GitHub URL
+            GitHub URL <span className="text-red-400">*</span>
           </label>
-          <input
-            type="url"
-            value={githubUrl}
-            onChange={(e) => setGithubUrl(e.target.value)}
-            placeholder="https://github.com/..."
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
-          />
+          <div className="relative">
+            <input
+              type="url"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder={`https://github.com/${githubUsername}/...`}
+              className={`w-full rounded-xl border bg-zinc-900 px-4 py-3 pr-10 text-sm text-white placeholder-zinc-600 focus:outline-none ${
+                ownerMismatch
+                  ? 'border-red-600 focus:border-red-500'
+                  : ownerOk
+                  ? 'border-green-600 focus:border-green-500'
+                  : 'border-zinc-700 focus:border-violet-500'
+              }`}
+              required
+            />
+            {(ownerMismatch || ownerOk) && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                {ownerOk ? '✓' : '✗'}
+              </span>
+            )}
+          </div>
+          {ownerMismatch && (
+            <p className="mt-1.5 text-xs text-red-400">
+              This repo belongs to @{urlOwner}, not @{githubUsername}.
+            </p>
+          )}
+          {ownerOk && (
+            <p className="mt-1.5 text-xs text-green-400">
+              Verified: repo belongs to @{githubUsername}.
+            </p>
+          )}
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-300">
-            Live demo URL
-          </label>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Live demo URL</label>
           <input
             type="url"
             value={demoUrl}
@@ -154,7 +216,7 @@ export default function NewProjectForm({ userId }: { userId: string }) {
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || ownerMismatch}
         className="w-full rounded-full bg-violet-600 py-3 text-sm font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {loading ? 'Submitting...' : 'Submit project'}
