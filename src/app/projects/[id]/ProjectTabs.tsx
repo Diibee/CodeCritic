@@ -6,12 +6,15 @@ import RunEmbed from './RunEmbed'
 type Tab = 'overview' | 'preview'
 
 interface Props {
+  githubUrl: string | null
   demoUrl: string | null
   overview: React.ReactNode
 }
 
-export default function ProjectTabs({ demoUrl, overview }: Props) {
+export default function ProjectTabs({ githubUrl, demoUrl, overview }: Props) {
   const [tab, setTab] = useState<Tab>('overview')
+
+  const hasPreview = !!(githubUrl || demoUrl)
 
   return (
     <div>
@@ -19,7 +22,7 @@ export default function ProjectTabs({ demoUrl, overview }: Props) {
         <TabButton active={tab === 'overview'} onClick={() => setTab('overview')}>
           Overview
         </TabButton>
-        {demoUrl && (
+        {hasPreview && (
           <TabButton active={tab === 'preview'} onClick={() => setTab('preview')}>
             <span className="flex items-center gap-1.5">
               <span className="text-green-400">▶</span> Preview
@@ -29,7 +32,9 @@ export default function ProjectTabs({ demoUrl, overview }: Props) {
       </div>
 
       {tab === 'overview' && overview}
-      {tab === 'preview' && demoUrl && <RunEmbed demoUrl={demoUrl} />}
+      {tab === 'preview' && hasPreview && (
+        <RunEmbed githubUrl={githubUrl} demoUrl={demoUrl} />
+      )}
     </div>
   )
 }
