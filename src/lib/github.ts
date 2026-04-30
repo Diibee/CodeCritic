@@ -6,5 +6,5 @@ export function getStackBlitzEmbedUrl(githubUrl: string): string | null {
   const repoPath = match[1].replace(/\.git$/, '')
   const branch = match[2] ?? ''
 
-  return `https://stackblitz.com/github/${repoPath}${branch}?embed=1&theme=dark&view=both`
+  return `https://stackblitz.com/github/${repoPath}${branch}?embed=1&theme=dark&view=preview&hideNavigation=1&hideDevTools=1`
 }

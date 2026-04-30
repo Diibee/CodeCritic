@@ -23,7 +23,7 @@ export default function ProjectTabs({ embedUrl, overview }: Props) {
         {embedUrl && (
           <TabButton active={tab === 'run'} onClick={() => setTab('run')}>
             <span className="flex items-center gap-1.5">
-              <span className="text-green-400">▶</span> Run
+              <span className="text-green-400">▶</span> Preview
             </span>
           </TabButton>
         )}
