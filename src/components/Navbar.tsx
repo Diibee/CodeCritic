@@ -4,10 +4,25 @@ import NavbarClient from './NavbarClient'
 
 export default async function Navbar() {
   let user = null
+  let unreadCount = 0
+
   try {
     const supabase = await createClient()
     const { data } = await supabase.auth.getUser()
     user = data.user
+
+    if (user) {
+      try {
+        const { count } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('read', false)
+        unreadCount = count ?? 0
+      } catch {
+        // notifications table may not exist yet
+      }
+    }
   } catch {
     // Supabase unavailable — render unauthenticated nav
   }
@@ -29,6 +44,9 @@ export default async function Navbar() {
             <Link href="/projects" className="hover:text-white transition-colors">
               Browse
             </Link>
+            <Link href="/leaderboard" className="hover:text-white transition-colors">
+              Leaderboard
+            </Link>
             {user && (
               <Link href="/dashboard" className="hover:text-white transition-colors">
                 Dashboard
@@ -38,7 +56,7 @@ export default async function Navbar() {
 
           {/* Right — actions */}
           <div className="flex justify-end">
-            <NavbarClient user={user} />
+            <NavbarClient user={user} unreadCount={unreadCount} />
           </div>
 
         </div>

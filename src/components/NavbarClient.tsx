@@ -14,7 +14,22 @@ function GearIcon() {
   )
 }
 
-export default function NavbarClient({ user }: { user: User | null }) {
+function BellIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
+export default function NavbarClient({
+  user,
+  unreadCount = 0,
+}: {
+  user: User | null
+  unreadCount?: number
+}) {
   const router = useRouter()
 
   async function handleSignOut() {
@@ -37,6 +52,29 @@ export default function NavbarClient({ user }: { user: User | null }) {
 
   return (
     <div className="flex items-center gap-4">
+      {/* Notification bell */}
+      <Link
+        href="/notifications"
+        className="relative text-zinc-400 hover:text-white transition-colors"
+        title="Notifications"
+      >
+        <BellIcon />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </Link>
+
+      {/* Profile */}
+      <Link
+        href={`/u/${user.id}`}
+        className="text-sm text-zinc-400 hover:text-white transition-colors"
+      >
+        Profile
+      </Link>
+
+      {/* Settings */}
       <Link
         href="/settings"
         className="text-zinc-400 hover:text-white transition-colors"
@@ -44,6 +82,7 @@ export default function NavbarClient({ user }: { user: User | null }) {
       >
         <GearIcon />
       </Link>
+
       <button
         onClick={handleSignOut}
         className="text-sm text-zinc-400 hover:text-white transition-colors"

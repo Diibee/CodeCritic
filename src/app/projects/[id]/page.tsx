@@ -34,6 +34,15 @@ export default async function ProjectPage({
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
+  // Fetch reviewer profiles
+  const reviewerIds = [...new Set((reviews ?? []).map((r) => r.reviewer_id).filter(Boolean))]
+  const { data: reviewerProfiles } = reviewerIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', reviewerIds)
+    : { data: [] }
+  const profileMap = Object.fromEntries(
+    (reviewerProfiles ?? []).map((p) => [p.id, p])
+  )
+
   const avgRating =
     reviews && reviews.length > 0
       ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
@@ -66,21 +75,34 @@ export default async function ProjectPage({
 
         {reviews && reviews.length > 0 ? (
           <div className="space-y-4">
-            {reviews.map((review) => (
-              <div key={review.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-medium text-zinc-300">Anonymous reviewer</span>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i} className={i < review.rating ? 'text-yellow-400' : 'text-zinc-700'}>
-                        ★
-                      </span>
-                    ))}
+            {reviews.map((review) => {
+              const reviewer = review.reviewer_id ? profileMap[review.reviewer_id] : null
+              const reviewerName = reviewer?.full_name || 'Anonymous'
+              return (
+                <div key={review.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+                  <div className="mb-3 flex items-center justify-between">
+                    {review.reviewer_id ? (
+                      <Link
+                        href={`/u/${review.reviewer_id}`}
+                        className="text-sm font-medium text-zinc-300 hover:text-violet-400 transition-colors"
+                      >
+                        {reviewerName}
+                      </Link>
+                    ) : (
+                      <span className="text-sm font-medium text-zinc-300">{reviewerName}</span>
+                    )}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i} className={i < review.rating ? 'text-yellow-400' : 'text-zinc-700'}>
+                          ★
+                        </span>
+                      ))}
+                    </div>
                   </div>
+                  <p className="text-sm text-zinc-400 leading-relaxed">{review.comment}</p>
                 </div>
-                <p className="text-sm text-zinc-400 leading-relaxed">{review.comment}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="py-12 text-center text-zinc-600">
