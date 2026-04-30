@@ -13,6 +13,7 @@ export default async function ProjectsPage({
   let query = supabase
     .from('projects')
     .select('*, reviews(count)')
+    .eq('is_public', true)
     .order('created_at', { ascending: false })
     .limit(24)
 
