@@ -78,14 +78,6 @@ export default async function ProjectsPage({
           </Suspense>
         </div>
 
-        {/* Active search label */}
-        {q && (
-          <p className="mb-4 text-sm text-zinc-500">
-            Results for <span className="text-white">"{q}"</span>
-            {tech && <> in <span className="text-violet-400">{tech}</span></>}
-          </p>
-        )}
-
         {/* Tech filter pills */}
         <div className="mb-8 flex flex-wrap gap-2">
           <Link
