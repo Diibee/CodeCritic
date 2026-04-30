@@ -128,49 +128,6 @@ export default async function UserProfilePage({
           </div>
         </div>
 
-        {/* Achievements */}
-        <div className="mb-10">
-          <h2 className="mb-5 text-lg font-semibold text-white">
-            Achievements{' '}
-            <span className="font-normal text-zinc-600">({earnedKeys.size}/{ACHIEVEMENTS.length})</span>
-          </h2>
-
-          {CATEGORIES.map((category) => {
-            const categoryAchievements = ACHIEVEMENTS.filter((a) => a.category === category)
-            return (
-              <div key={category} className="mb-6">
-                <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
-                  {category}
-                </h3>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {categoryAchievements.map((achievement) => {
-                    const earned = earnedKeys.has(achievement.key)
-                    return (
-                      <div
-                        key={achievement.key}
-                        title={achievement.description}
-                        className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
-                          earned
-                            ? 'border-violet-800/40 bg-violet-900/10'
-                            : 'border-zinc-800 bg-zinc-900/50 opacity-40'
-                        }`}
-                      >
-                        <span className="text-xl shrink-0">{earned ? achievement.emoji : '🔒'}</span>
-                        <div className="min-w-0">
-                          <p className={`text-xs font-medium truncate ${earned ? 'text-white' : 'text-zinc-500'}`}>
-                            {achievement.name}
-                          </p>
-                          <p className="truncate text-[11px] text-zinc-600">{achievement.description}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
         {/* Projects */}
         <h2 className="mb-4 text-lg font-semibold text-white">
           Projects{' '}
@@ -239,6 +196,49 @@ export default async function UserProfilePage({
             })}
           </div>
         )}
+
+        {/* Achievements */}
+        <div className="mt-12">
+          <h2 className="mb-5 text-lg font-semibold text-white">
+            Achievements{' '}
+            <span className="font-normal text-zinc-600">({earnedKeys.size}/{ACHIEVEMENTS.length})</span>
+          </h2>
+
+          {CATEGORIES.map((category) => {
+            const categoryAchievements = ACHIEVEMENTS.filter((a) => a.category === category)
+            return (
+              <div key={category} className="mb-6">
+                <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
+                  {category}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {categoryAchievements.map((achievement) => {
+                    const earned = earnedKeys.has(achievement.key)
+                    return (
+                      <div
+                        key={achievement.key}
+                        title={achievement.description}
+                        className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                          earned
+                            ? 'border-violet-800/40 bg-violet-900/10'
+                            : 'border-zinc-800 bg-zinc-900/50 opacity-40'
+                        }`}
+                      >
+                        <span className="text-xl shrink-0">{earned ? achievement.emoji : '🔒'}</span>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-medium truncate ${earned ? 'text-white' : 'text-zinc-500'}`}>
+                            {achievement.name}
+                          </p>
+                          <p className="truncate text-[11px] text-zinc-600">{achievement.description}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </main>
     </div>
   )
