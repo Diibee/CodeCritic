@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const EXCLUDED = new Set([
   'node_modules', 'dist', '.next', 'build', 'out', '.git',
-  'coverage', '.turbo', '.vercel', 'public',
+  'coverage', '.turbo', '.vercel',
 ])
 
 const ALLOWED_EXTENSIONS = new Set([
