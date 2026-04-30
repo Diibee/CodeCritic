@@ -69,6 +69,7 @@ export default function SettingsForm({
   const connectedProviders = new Set(identities.map((i) => i.provider))
   const hasEmailAuth = connectedProviders.has('email')
   const canUnlink = identities.length > 1
+  const [unlinkError, setUnlinkError] = useState('')
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -142,9 +143,14 @@ export default function SettingsForm({
   }
 
   async function handleUnlink(identity: UserIdentity) {
+    setUnlinkError('')
     const supabase = createClient()
     const { error } = await supabase.auth.unlinkIdentity(identity)
-    if (!error) router.refresh()
+    if (error) {
+      setUnlinkError(error.message)
+    } else {
+      router.refresh()
+    }
   }
 
   return (
@@ -325,6 +331,9 @@ export default function SettingsForm({
         <p className="mb-5 text-sm text-zinc-500">
           Sign in with multiple providers. You need at least one connected account.
         </p>
+        {unlinkError && (
+          <p className="mb-3 rounded-xl bg-red-900/20 px-4 py-2.5 text-sm text-red-400">{unlinkError}</p>
+        )}
         <div className="space-y-3">
           {PROVIDERS.map(({ id, label, icon }) => {
             const identity = identities.find((i) => i.provider === id)
