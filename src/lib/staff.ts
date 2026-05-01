@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 
-export type StaffRole = 'developer' | 'admin' | 'moderator' | 'support' | 'curator'
+export type StaffRole = 'developer' | 'admin' | 'moderator' | 'support'
 
 export type StaffPower =
   | 'access_admin'
@@ -52,14 +52,6 @@ export const STAFF_ROLES: Record<StaffRole, {
     bgColor: 'bg-green-900/20',
     textColor: 'text-green-400',
     powers: ['access_admin', 'manage_users', 'view_analytics', 'manage_subscriptions', 'send_notifications'],
-  },
-  curator: {
-    label: 'Curator',
-    emoji: '✨',
-    borderColor: 'border-violet-700/60',
-    bgColor: 'bg-violet-900/20',
-    textColor: 'text-violet-400',
-    powers: ['access_admin', 'feature_projects'],
   },
 }
 
