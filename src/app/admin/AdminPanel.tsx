@@ -13,7 +13,6 @@ import { StaffBadge } from '@/components/StaffBadge'
 type Project = {
   id: string
   title: string
-  description: string
   is_public: boolean
   is_featured: boolean
   created_at: string
