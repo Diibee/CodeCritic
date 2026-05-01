@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { checkAndGrantAchievements } from '@/app/actions/achievements'
 import { ACHIEVEMENTS, ACHIEVEMENT_MAP, CATEGORIES } from '@/lib/achievements'
 import { isPremium } from '@/lib/subscription'
+import { StaffBadge } from '@/components/StaffBadge'
 
 function getGitHubPreviewUrl(githubUrl: string | null): string | null {
   if (!githubUrl) return null
@@ -94,6 +95,7 @@ export default async function UserProfilePage({
                   👑 Premium
                 </span>
               )}
+              <StaffBadge role={profile.role} size="md" />
               {isOwnProfile && (
                 <Link
                   href="/settings"

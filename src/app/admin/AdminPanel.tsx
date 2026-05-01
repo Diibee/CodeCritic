@@ -7,6 +7,8 @@ import {
   adminToggleFeatured,
   adminDeleteProject,
 } from '@/app/actions/admin'
+import { STAFF_ROLES, isStaffRole, type StaffRole, type StaffPower } from '@/lib/staff'
+import { StaffBadge } from '@/components/StaffBadge'
 
 type Project = {
   id: string
@@ -31,7 +33,12 @@ type User = {
 
 type Tab = 'projects' | 'users'
 
-export default function AdminPanel({ projects, users }: { projects: Project[]; users: User[] }) {
+function can(role: string, power: StaffPower): boolean {
+  if (!isStaffRole(role)) return false
+  return (STAFF_ROLES[role as StaffRole].powers as string[]).includes(power)
+}
+
+export default function AdminPanel({ projects, users, currentRole }: { projects: Project[]; users: User[]; currentRole: string }) {
   const [tab, setTab] = useState<Tab>('projects')
 
   return (
@@ -76,13 +83,19 @@ export default function AdminPanel({ projects, users }: { projects: Project[]; u
         ))}
       </div>
 
-      {tab === 'projects' && <ProjectsTable projects={projects} />}
-      {tab === 'users' && <UsersTable users={users} />}
+      {tab === 'projects' && (
+        <ProjectsTable
+          projects={projects}
+          canManageProjects={can(currentRole, 'manage_projects')}
+          canFeature={can(currentRole, 'feature_projects')}
+        />
+      )}
+      {tab === 'users' && <UsersTable users={users} canManageUsers={can(currentRole, 'manage_users')} />}
     </div>
   )
 }
 
-function ProjectsTable({ projects }: { projects: Project[] }) {
+function ProjectsTable({ projects, canManageProjects, canFeature }: { projects: Project[]; canManageProjects: boolean; canFeature: boolean }) {
   const [isPending, startTransition] = useTransition()
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
@@ -157,44 +170,52 @@ function ProjectsTable({ projects }: { projects: Project[] }) {
               </td>
               <td className="px-5 py-3">
                 <div className="flex items-center justify-end gap-1.5">
-                  <button
-                    onClick={() => handleToggleVisibility(project.id, project.is_public)}
-                    disabled={isPending}
-                    title={project.is_public ? 'Make private' : 'Make public'}
-                    className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
-                  >
-                    {project.is_public ? '👁 Hide' : '👁 Show'}
-                  </button>
-                  <button
-                    onClick={() => handleToggleFeatured(project.id, project.is_featured)}
-                    disabled={isPending}
-                    title={project.is_featured ? 'Unfeature' : 'Feature'}
-                    className={`rounded-lg border px-2.5 py-1 text-xs transition-colors disabled:opacity-40 ${
-                      project.is_featured
-                        ? 'border-amber-700/60 text-amber-400 hover:border-amber-600'
-                        : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
-                    }`}
-                  >
-                    📌
-                  </button>
-                  <button
-                    onClick={() => handleDelete(project.id)}
-                    disabled={isPending}
-                    className={`rounded-lg border px-2.5 py-1 text-xs transition-colors disabled:opacity-40 ${
-                      confirmDelete === project.id
-                        ? 'border-red-600 bg-red-900/30 text-red-300'
-                        : 'border-red-900/50 text-red-400 hover:border-red-700'
-                    }`}
-                  >
-                    {confirmDelete === project.id ? 'Confirm?' : '🗑 Delete'}
-                  </button>
-                  {confirmDelete === project.id && (
+                  {canManageProjects && (
                     <button
-                      onClick={() => setConfirmDelete(null)}
-                      className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:text-white transition-colors"
+                      onClick={() => handleToggleVisibility(project.id, project.is_public)}
+                      disabled={isPending}
+                      title={project.is_public ? 'Make private' : 'Make public'}
+                      className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
                     >
-                      Cancel
+                      {project.is_public ? '👁 Hide' : '👁 Show'}
                     </button>
+                  )}
+                  {canFeature && (
+                    <button
+                      onClick={() => handleToggleFeatured(project.id, project.is_featured)}
+                      disabled={isPending}
+                      title={project.is_featured ? 'Unfeature' : 'Feature'}
+                      className={`rounded-lg border px-2.5 py-1 text-xs transition-colors disabled:opacity-40 ${
+                        project.is_featured
+                          ? 'border-amber-700/60 text-amber-400 hover:border-amber-600'
+                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
+                      }`}
+                    >
+                      📌
+                    </button>
+                  )}
+                  {canManageProjects && (
+                    <>
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        disabled={isPending}
+                        className={`rounded-lg border px-2.5 py-1 text-xs transition-colors disabled:opacity-40 ${
+                          confirmDelete === project.id
+                            ? 'border-red-600 bg-red-900/30 text-red-300'
+                            : 'border-red-900/50 text-red-400 hover:border-red-700'
+                        }`}
+                      >
+                        {confirmDelete === project.id ? 'Confirm?' : '🗑 Delete'}
+                      </button>
+                      {confirmDelete === project.id && (
+                        <button
+                          onClick={() => setConfirmDelete(null)}
+                          className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:text-white transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </td>
@@ -209,7 +230,7 @@ function ProjectsTable({ projects }: { projects: Project[] }) {
   )
 }
 
-function UsersTable({ users }: { users: User[] }) {
+function UsersTable({ users, canManageUsers }: { users: User[]; canManageUsers: boolean }) {
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden">
       <table className="w-full text-sm">
@@ -235,15 +256,10 @@ function UsersTable({ users }: { users: User[] }) {
                 </Link>
               </td>
               <td className="px-5 py-3">
-                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${
-                  user.role === 'admin'
-                    ? 'border-red-700/60 bg-red-900/20 text-red-400'
-                    : user.role === 'staff'
-                    ? 'border-violet-700/60 bg-violet-900/20 text-violet-400'
-                    : 'border-zinc-700 text-zinc-500'
-                }`}>
-                  {user.role ?? 'user'}
-                </span>
+                <StaffBadge role={user.role} />
+                {!isStaffRole(user.role) && (
+                  <span className="rounded-full border border-zinc-800 px-2.5 py-0.5 text-[10px] text-zinc-600">user</span>
+                )}
               </td>
               <td className="px-5 py-3 text-zinc-400">{user.project_count}</td>
               <td className="px-5 py-3 text-zinc-400">{user.review_count}</td>

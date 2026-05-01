@@ -8,6 +8,7 @@ import ProjectTabs from './ProjectTabs'
 import ProjectOwnerActions from './ProjectOwnerActions'
 import AIReviewPanel from './AIReviewPanel'
 import AnalyticsPanel, { computeAnalytics } from './AnalyticsPanel'
+import { StaffBadge } from '@/components/StaffBadge'
 
 export default async function ProjectPage({
   params,
@@ -40,7 +41,7 @@ export default async function ProjectPage({
   // Fetch reviewer profiles
   const reviewerIds = [...new Set((reviews ?? []).map((r) => r.reviewer_id).filter(Boolean))]
   const { data: reviewerProfiles } = reviewerIds.length > 0
-    ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', reviewerIds)
+    ? await supabase.from('profiles').select('id, full_name, avatar_url, role').in('id', reviewerIds)
     : { data: [] }
   const profileMap = Object.fromEntries(
     (reviewerProfiles ?? []).map((p) => [p.id, p])
@@ -87,16 +88,19 @@ export default async function ProjectPage({
               return (
                 <div key={review.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
                   <div className="mb-3 flex items-center justify-between">
-                    {review.reviewer_id ? (
-                      <Link
-                        href={`/u/${review.reviewer_id}`}
-                        className="text-sm font-medium text-zinc-300 hover:text-violet-400 transition-colors"
-                      >
-                        {reviewerName}
-                      </Link>
-                    ) : (
-                      <span className="text-sm font-medium text-zinc-300">{reviewerName}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {review.reviewer_id ? (
+                        <Link
+                          href={`/u/${review.reviewer_id}`}
+                          className="text-sm font-medium text-zinc-300 hover:text-violet-400 transition-colors"
+                        >
+                          {reviewerName}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-medium text-zinc-300">{reviewerName}</span>
+                      )}
+                      <StaffBadge role={reviewer?.role} />
+                    </div>
                     <div className="flex items-center gap-1">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <span key={i} className={i < review.rating ? 'text-yellow-400' : 'text-zinc-700'}>

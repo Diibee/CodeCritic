@@ -6,6 +6,7 @@ import { checkAndGrantAchievements } from './achievements'
 import { isPremium } from '@/lib/subscription'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { sendReviewNotification } from '@/lib/email'
+import { isStaff } from '@/lib/staff'
 
 export async function submitReview(projectId: string, rating: number, comment: string) {
   const supabase = await createClient()
@@ -33,6 +34,15 @@ export async function submitReview(projectId: string, rating: number, comment: s
 
   if (project && project.user_id !== user.id) {
     await checkAndGrantAchievements(project.user_id)
+
+    // Grant staff_reviewed achievement if reviewer is staff
+    const reviewerIsStaff = await isStaff(user.id)
+    if (reviewerIsStaff) {
+      await supabaseAdmin.from('user_achievements').upsert(
+        { user_id: project.user_id, achievement_key: 'staff_reviewed' },
+        { onConflict: 'user_id,achievement_key' },
+      )
+    }
 
     // Send email notification if owner is Premium
     try {

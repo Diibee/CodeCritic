@@ -21,6 +21,7 @@ export type AchievementKey =
   | 'early_adopter'
   | 'leaderboard_top3'
   | 'all_tech'
+  | 'staff_reviewed'
 
 export interface Achievement {
   key: AchievementKey
@@ -63,9 +64,10 @@ export const ACHIEVEMENTS: Achievement[] = [
   { key: 'ai_reviewed', name: 'AI Insights', description: 'Generate your first AI review', emoji: '🤖', category: 'AI' },
 
   // Special
-  { key: 'early_adopter',    name: 'Early Adopter', description: 'One of the first to join CodeCritic', emoji: '🌱', category: 'Special' },
-  { key: 'leaderboard_top3', name: 'Top 3',         description: 'Reach top 3 on the leaderboard',      emoji: '🎖️', category: 'Special' },
-  { key: 'all_tech',         name: 'Polyglot',      description: 'Use 5+ different tech stacks across projects', emoji: '🌐', category: 'Special' },
+  { key: 'early_adopter',    name: 'Early Adopter',   description: 'One of the first to join CodeCritic',            emoji: '🌱', category: 'Special' },
+  { key: 'leaderboard_top3', name: 'Top 3',            description: 'Reach top 3 on the leaderboard',                 emoji: '🎖️', category: 'Special' },
+  { key: 'all_tech',         name: 'Polyglot',         description: 'Use 5+ different tech stacks across projects',   emoji: '🌐', category: 'Special' },
+  { key: 'staff_reviewed',   name: 'Staff Approved',   description: 'Receive a review from a CodeCritic staff member', emoji: '🏅', category: 'Special' },
 ]
 
 export const ACHIEVEMENT_MAP = Object.fromEntries(

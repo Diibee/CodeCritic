@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { isStaff } from '@/lib/staff'
+import { isStaff, getStaffRole } from '@/lib/staff'
 import AdminPanel from './AdminPanel'
 
 export default async function AdminPage() {
@@ -10,8 +10,8 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const staff = await isStaff(user.id)
-  if (!staff) redirect('/')
+  const staffRole = await getStaffRole(user.id)
+  if (!staffRole) redirect('/')
 
   // Fetch all projects (including private) with owner and review count
   const { data: rawProjects } = await supabaseAdmin
@@ -52,7 +52,7 @@ export default async function AdminPage() {
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <AdminPanel projects={projects} users={users} />
+        <AdminPanel projects={projects} users={users} currentRole={staffRole} />
       </main>
     </div>
   )
