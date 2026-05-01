@@ -42,6 +42,7 @@ export default function SettingsForm({
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState('')
+  const [avatarError, setAvatarError] = useState('')
   const [isPending, startTransition] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -74,12 +75,17 @@ export default function SettingsForm({
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setAvatarError('')
     setAvatarUploading(true)
     const supabase = createClient()
     const ext = file.name.split('.').pop()
     const path = `${userId}/avatar.${ext}`
     const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    if (uploadError) { setAvatarUploading(false); return }
+    if (uploadError) {
+      setAvatarError(uploadError.message)
+      setAvatarUploading(false)
+      return
+    }
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
     const publicUrl = `${data.publicUrl}?t=${Date.now()}`
     setAvatarUrl(publicUrl)
@@ -186,6 +192,7 @@ export default function SettingsForm({
               {avatarUploading ? 'Uploading...' : 'Change photo'}
             </button>
             <p className="mt-1.5 text-xs text-zinc-600">JPG, PNG or GIF. Max 2MB.</p>
+            {avatarError && <p className="mt-1 text-xs text-red-400">{avatarError}</p>}
             <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
           </div>
         </div>
