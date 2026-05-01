@@ -34,14 +34,40 @@ export async function POST(request: NextRequest) {
     }, { onConflict: 'user_id' })
   }
 
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID!, quantity: 1 }],
-    success_url: `${appUrl}/settings?upgraded=1`,
-    cancel_url: `${appUrl}/pricing`,
-    subscription_data: { metadata: { supabase_user_id: user.id } },
-  })
+  let session
+  try {
+    session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID!, quantity: 1 }],
+      success_url: `${appUrl}/settings?upgraded=1`,
+      cancel_url: `${appUrl}/pricing`,
+      subscription_data: { metadata: { supabase_user_id: user.id } },
+    })
+  } catch (err: unknown) {
+    // Customer exists in wrong mode (e.g. live vs test) — recreate it
+    const stripeErr = err as { code?: string; param?: string }
+    if (stripeErr?.code === 'resource_missing' && stripeErr?.param === 'customer') {
+      const { data: { user: fullUser } } = await supabaseAdmin.auth.admin.getUserById(user.id)
+      const newCustomer = await stripe.customers.create({
+        email: fullUser?.email,
+        metadata: { supabase_user_id: user.id },
+      })
+      await supabaseAdmin.from('subscriptions').update({
+        stripe_customer_id: newCustomer.id,
+      }).eq('user_id', user.id)
+      session = await stripe.checkout.sessions.create({
+        customer: newCustomer.id,
+        mode: 'subscription',
+        line_items: [{ price: process.env.STRIPE_PREMIUM_PRICE_ID!, quantity: 1 }],
+        success_url: `${appUrl}/settings?upgraded=1`,
+        cancel_url: `${appUrl}/pricing`,
+        subscription_data: { metadata: { supabase_user_id: user.id } },
+      })
+    } else {
+      throw err
+    }
+  }
 
   return NextResponse.json({ url: session.url })
 }
