@@ -20,7 +20,8 @@ export default function ContactForm() {
     const res = await fetch('/api/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, subject, message }),
+      // "website" is a honeypot — always sent empty by real users
+      body: JSON.stringify({ name, email, subject, message, website: '' }),
     })
 
     if (res.ok) {
@@ -55,6 +56,16 @@ export default function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Honeypot — hidden from real users, bots fill it in */}
+      <input
+        type="text"
+        name="website"
+        aria-hidden="true"
+        tabIndex={-1}
+        autoComplete="off"
+        style={{ display: 'none' }}
+      />
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-zinc-300">
