@@ -112,7 +112,11 @@ export default async function ProjectPage({
   const demoUrl: string | null = project.demo_url ?? null
   const githubUrl: string | null = project.github_url ?? null
 
-  const ownerIsPremium = isOwner ? await isPremium(project.user_id) : false
+  const { isStaff } = await import('@/lib/staff')
+  const [ownerIsPremium, currentUserIsStaff] = await Promise.all([
+    isOwner ? isPremium(project.user_id) : Promise.resolve(false),
+    user ? isStaff(user.id) : Promise.resolve(false),
+  ])
 
   const overview = (
     <div className="space-y-6">
@@ -280,6 +284,7 @@ export default async function ProjectPage({
             <AIReviewPanel
               projectId={id}
               isOwner={isOwner}
+              isStaff={currentUserIsStaff}
               initialReview={project.ai_review ?? null}
               reviewAt={project.ai_review_at ?? null}
             />

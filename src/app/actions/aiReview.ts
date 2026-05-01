@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import Groq from 'groq-sdk'
 import { checkAndGrantAchievements } from './achievements'
 import { isPremium } from '@/lib/subscription'
+import { isStaff } from '@/lib/staff'
 
 const EXCLUDED = new Set(['node_modules', 'dist', '.next', 'build', 'out', '.git', 'coverage', '.turbo'])
 const ALLOWED_EXT = new Set(['js', 'jsx', 'ts', 'tsx', 'py', 'go', 'rs', 'css', 'html', 'json', 'md'])
@@ -35,8 +36,9 @@ export async function generateAIReview(projectId: string) {
   if (!project) throw new Error('Project not found')
   if (project.user_id !== user.id) throw new Error('Unauthorized')
 
-  // Cooldown: max one generation per 24 hours
-  if (project.ai_review && project.ai_review_at) {
+  // Cooldown: max one generation per 24 hours (bypassed for staff)
+  const userIsStaff = await isStaff(user.id)
+  if (!userIsStaff && project.ai_review && project.ai_review_at) {
     const lastGenerated = new Date(project.ai_review_at).getTime()
     const hoursSince = (Date.now() - lastGenerated) / 1000 / 60 / 60
     if (hoursSince < 24) {

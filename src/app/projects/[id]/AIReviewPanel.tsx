@@ -74,11 +74,13 @@ function MarkdownRenderer({ content }: { content: string }) {
 export default function AIReviewPanel({
   projectId,
   isOwner,
+  isStaff = false,
   initialReview,
   reviewAt,
 }: {
   projectId: string
   isOwner: boolean
+  isStaff?: boolean
   initialReview: string | null
   reviewAt: string | null
 }) {
@@ -87,11 +89,11 @@ export default function AIReviewPanel({
   const [confirmRegen, setConfirmRegen] = useState(false)
   const router = useRouter()
 
-  // Compute cooldown state from reviewAt
+  // Compute cooldown state from reviewAt (staff bypass)
   const hoursLeft = reviewAt
     ? Math.ceil(24 - (Date.now() - new Date(reviewAt).getTime()) / 1000 / 60 / 60)
     : 0
-  const inCooldown = hoursLeft > 0
+  const inCooldown = !isStaff && hoursLeft > 0
 
   function handleGenerate() {
     setError('')
