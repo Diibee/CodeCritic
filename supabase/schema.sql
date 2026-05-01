@@ -19,6 +19,9 @@ alter table public.profiles enable row level security;
 create policy "Public profiles are viewable by everyone"
   on public.profiles for select using (true);
 
+-- role column: 'user' (default), 'staff', 'admin' — set manually via DB
+alter table public.profiles add column if not exists role text default 'user' not null;
+
 create policy "Users can insert their own profile"
   on public.profiles for insert with check (auth.uid() = id);
 

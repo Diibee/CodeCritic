@@ -26,9 +26,11 @@ function BellIcon() {
 export default function NavbarClient({
   user,
   unreadCount = 0,
+  isStaff = false,
 }: {
   user: User | null
   unreadCount?: number
+  isStaff?: boolean
 }) {
   const router = useRouter()
 
@@ -73,6 +75,17 @@ export default function NavbarClient({
           </span>
         )}
       </Link>
+
+      {/* Staff panel */}
+      {isStaff && (
+        <Link
+          href="/admin"
+          className="rounded-full border border-red-800/60 px-3 py-1 text-xs font-medium text-red-400 hover:border-red-600 hover:text-red-300 transition-colors"
+          title="Staff panel"
+        >
+          Staff
+        </Link>
+      )}
 
       {/* Settings */}
       <Link

@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import NavbarClient from './NavbarClient'
+import { isStaff } from '@/lib/staff'
 
 export default async function Navbar() {
   let user = null
   let unreadCount = 0
+  let staffUser = false
 
   try {
     const supabase = await createClient()
@@ -22,6 +24,7 @@ export default async function Navbar() {
       } catch {
         // notifications table may not exist yet
       }
+      staffUser = await isStaff(user.id)
     }
   } catch {
     // Supabase unavailable — render unauthenticated nav
@@ -59,7 +62,7 @@ export default async function Navbar() {
 
           {/* Right — actions */}
           <div className="flex justify-end">
-            <NavbarClient user={user} unreadCount={unreadCount} />
+            <NavbarClient user={user} unreadCount={unreadCount} isStaff={staffUser} />
           </div>
 
         </div>
