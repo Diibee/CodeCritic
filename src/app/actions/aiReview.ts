@@ -28,13 +28,22 @@ export async function generateAIReview(projectId: string) {
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, user_id, title, description, tech_stack, github_url, ai_review')
+    .select('id, user_id, title, description, tech_stack, github_url, ai_review, ai_review_at')
     .eq('id', projectId)
     .single()
 
   if (!project) throw new Error('Project not found')
   if (project.user_id !== user.id) throw new Error('Unauthorized')
-  if (project.ai_review) return
+
+  // Cooldown: max one generation per 24 hours
+  if (project.ai_review && project.ai_review_at) {
+    const lastGenerated = new Date(project.ai_review_at).getTime()
+    const hoursSince = (Date.now() - lastGenerated) / 1000 / 60 / 60
+    if (hoursSince < 24) {
+      const hoursLeft = Math.ceil(24 - hoursSince)
+      throw new Error(`COOLDOWN:${hoursLeft}`)
+    }
+  }
 
   const githubUrl = project.github_url
   if (!githubUrl) throw new Error('No GitHub URL on this project')

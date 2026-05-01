@@ -84,19 +84,32 @@ export default function AIReviewPanel({
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [confirmRegen, setConfirmRegen] = useState(false)
   const router = useRouter()
+
+  // Compute cooldown state from reviewAt
+  const hoursLeft = reviewAt
+    ? Math.ceil(24 - (Date.now() - new Date(reviewAt).getTime()) / 1000 / 60 / 60)
+    : 0
+  const inCooldown = hoursLeft > 0
 
   function handleGenerate() {
     setError('')
+    setConfirmRegen(false)
     startTransition(async () => {
       try {
         await generateAIReview(projectId)
         router.refresh()
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : ''
-        setError(msg === 'PREMIUM_REQUIRED'
-          ? 'AI reviews are a Premium feature. Upgrade to unlock them.'
-          : 'Failed to generate review. Please try again.')
+        if (msg === 'PREMIUM_REQUIRED') {
+          setError('AI reviews are a Premium feature. Upgrade to unlock them.')
+        } else if (msg.startsWith('COOLDOWN:')) {
+          const h = msg.split(':')[1]
+          setError(`You can regenerate in ${h}h. Cooldown prevents excessive API usage.`)
+        } else {
+          setError('Failed to generate review. Please try again.')
+        }
       }
     })
   }
@@ -144,20 +157,74 @@ export default function AIReviewPanel({
 
   return (
     <div>
-      {reviewAt && (
-        <p className="mb-4 text-xs text-zinc-600">
-          Generated{' '}
-          {new Date(reviewAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
-        </p>
-      )}
+      {/* Header row: date + regenerate button */}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        {reviewAt && (
+          <p className="text-xs text-zinc-600">
+            Generated{' '}
+            {new Date(reviewAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </p>
+        )}
+
+        {isOwner && (
+          <div className="flex items-center gap-2 shrink-0">
+            {error && (
+              <p className="text-xs text-red-400 max-w-[200px] text-right">{error}</p>
+            )}
+            {isPending ? (
+              <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Analyzing…
+              </span>
+            ) : confirmRegen ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Overwrite current review?</span>
+                <button
+                  onClick={handleGenerate}
+                  className="rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-500 transition-colors"
+                >
+                  Yes, regenerate
+                </button>
+                <button
+                  onClick={() => { setConfirmRegen(false); setError('') }}
+                  className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setConfirmRegen(true); setError('') }}
+                disabled={inCooldown}
+                title={inCooldown ? `Available in ${hoursLeft}h` : 'Regenerate AI review with latest code'}
+                className="flex items-center gap-1.5 rounded-full border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-400 hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                🔄 Regenerate
+                {inCooldown && (
+                  <span className="text-zinc-600">({hoursLeft}h)</span>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
         <MarkdownRenderer content={initialReview} />
       </div>
+
+      {isPending && (
+        <p className="mt-3 text-center text-xs text-zinc-600">
+          Analyzing your codebase… this may take 10–20 seconds.
+        </p>
+      )}
     </div>
   )
 }
