@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import {
   adminToggleVisibility,
@@ -394,6 +394,84 @@ function ReviewsTable({
 
 const ROLE_OPTIONS = ['user', 'support', 'moderator', 'admin', 'developer'] as const
 
+function RoleSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (role: string) => void
+  disabled: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function select(role: string) {
+    setOpen(false)
+    onChange(role)
+  }
+
+  const roleColor: Record<string, string> = {
+    developer: 'text-blue-400',
+    admin: 'text-red-400',
+    moderator: 'text-orange-400',
+    support: 'text-green-400',
+    user: 'text-zinc-400',
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
+      >
+        <span className={roleColor[value] ?? 'text-zinc-400'}>{value}</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 12 12"
+          fill="none"
+          className={`shrink-0 text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1.5 w-36 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl">
+          {ROLE_OPTIONS.map((r) => (
+            <button
+              key={r}
+              onClick={() => select(r)}
+              className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
+                r === value
+                  ? 'bg-violet-600/20 text-violet-300'
+                  : 'hover:bg-zinc-800 hover:text-white'
+              } ${roleColor[r] ?? 'text-zinc-400'}`}
+            >
+              {r}
+              {r === value && (
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" className="shrink-0 text-violet-400">
+                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function UsersTable({
   users,
   canManageUsers,
@@ -464,16 +542,11 @@ function UsersTable({
                 </td>
                 <td className="px-5 py-3">
                   {canManageRoles ? (
-                    <select
+                    <RoleSelect
                       value={user.role ?? 'user'}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                      onChange={(role) => handleRoleChange(user.id, role)}
                       disabled={isPending}
-                      className="rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:border-violet-500 focus:outline-none disabled:opacity-40"
-                    >
-                      {ROLE_OPTIONS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
+                    />
                   ) : (
                     <>
                       <StaffBadge role={user.role} />
