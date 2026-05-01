@@ -31,7 +31,7 @@ export default function ContactPage() {
           <div>
             <p className="text-xs text-zinc-500 mb-0.5">Email me directly</p>
             <p className="font-medium text-violet-400 group-hover:text-violet-300 transition-colors">
-              {EMAIL}
+              dibe.mtt@gmail.com
             </p>
           </div>
         </a>
