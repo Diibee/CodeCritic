@@ -1,12 +1,11 @@
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import ContactForm from './ContactForm'
 
 export const metadata = {
   title: 'Contact — CodeCritic',
   description: 'Get in touch with the creator of CodeCritic.',
 }
-
-const EMAIL = 'dibe.mtt@gmail.com'
 
 export default function ContactPage() {
   return (
@@ -40,51 +39,7 @@ export default function ContactPage() {
         {/* Form */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
           <h2 className="text-base font-semibold text-white mb-5">Send a message</h2>
-          <form
-            action={`mailto:${EMAIL}`}
-            method="get"
-            encType="text/plain"
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="subject" className="mb-1.5 block text-sm font-medium text-zinc-300">
-                Subject
-              </label>
-              <input
-                id="subject"
-                name="subject"
-                type="text"
-                placeholder="What's on your mind?"
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="body" className="mb-1.5 block text-sm font-medium text-zinc-300">
-                Message
-              </label>
-              <textarea
-                id="body"
-                name="body"
-                rows={5}
-                placeholder="Bug report, feedback, idea..."
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none resize-none"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-full bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
-            >
-              Open in mail app →
-            </button>
-
-            <p className="text-center text-xs text-zinc-600">
-              Opens your default mail client with the message pre-filled.
-            </p>
-          </form>
+          <ContactForm />
         </div>
       </main>
 
