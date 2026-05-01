@@ -44,17 +44,45 @@ export default async function AdminPage() {
     .limit(200)
 
   // Fetch project + review counts per user
-  const { data: allProjects } = await supabaseAdmin.from('projects').select('user_id')
+  const { data: allProjectsForCount } = await supabaseAdmin.from('projects').select('user_id')
   const { data: allUserReviews } = await supabaseAdmin.from('reviews').select('reviewer_id')
 
   const projectCountMap: Record<string, number> = {}
-  for (const p of allProjects ?? []) {
+  for (const p of allProjectsForCount ?? []) {
     projectCountMap[p.user_id] = (projectCountMap[p.user_id] ?? 0) + 1
   }
   const userReviewCountMap: Record<string, number> = {}
   for (const r of allUserReviews ?? []) {
     userReviewCountMap[r.reviewer_id] = (userReviewCountMap[r.reviewer_id] ?? 0) + 1
   }
+
+  // Fetch premium subscriptions
+  const { data: subscriptions } = await supabaseAdmin
+    .from('subscriptions')
+    .select('user_id, status')
+  const premiumUserIds = new Set(
+    (subscriptions ?? []).filter((s) => s.status === 'active').map((s) => s.user_id)
+  )
+
+  // Fetch reviews for manage_reviews tab
+  const { data: rawReviews } = await supabaseAdmin
+    .from('reviews')
+    .select('id, project_id, reviewer_id, rating, comment, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  const reviewerIds = [...new Set((rawReviews ?? []).map((r) => r.reviewer_id))]
+  const reviewProjectIds = [...new Set((rawReviews ?? []).map((r) => r.project_id))]
+  const [{ data: reviewerProfiles }, { data: reviewProjects }] = await Promise.all([
+    reviewerIds.length > 0
+      ? supabaseAdmin.from('profiles').select('id, full_name').in('id', reviewerIds)
+      : Promise.resolve({ data: [] }),
+    reviewProjectIds.length > 0
+      ? supabaseAdmin.from('projects').select('id, title').in('id', reviewProjectIds)
+      : Promise.resolve({ data: [] }),
+  ])
+  const reviewerMap = Object.fromEntries((reviewerProfiles ?? []).map((p) => [p.id, p.full_name]))
+  const reviewProjectMap = Object.fromEntries((reviewProjects ?? []).map((p) => [p.id, p.title]))
 
   const projects = (rawProjects ?? []).map((p) => ({
     id: p.id,
@@ -74,13 +102,25 @@ export default async function AdminPage() {
     created_at: u.created_at,
     project_count: projectCountMap[u.id] ?? 0,
     review_count: userReviewCountMap[u.id] ?? 0,
+    is_premium: premiumUserIds.has(u.id),
+  }))
+
+  const reviews = (rawReviews ?? []).map((r) => ({
+    id: r.id,
+    project_id: r.project_id,
+    project_title: reviewProjectMap[r.project_id] ?? null,
+    reviewer_id: r.reviewer_id,
+    reviewer_name: reviewerMap[r.reviewer_id] ?? null,
+    rating: r.rating as number,
+    comment: r.comment as string,
+    created_at: r.created_at,
   }))
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <AdminPanel projects={projects} users={users} currentRole={staffRole} />
+        <AdminPanel projects={projects} users={users} reviews={reviews} currentRole={staffRole} />
       </main>
     </div>
   )
