@@ -394,6 +394,14 @@ function ReviewsTable({
 
 const ROLE_OPTIONS = ['user', 'support', 'moderator', 'admin', 'developer'] as const
 
+const ROLE_COLOR: Record<string, string> = {
+  developer: 'text-blue-400',
+  admin: 'text-red-400',
+  moderator: 'text-orange-400',
+  support: 'text-green-400',
+  user: 'text-zinc-400',
+}
+
 function RoleSelect({
   value,
   onChange,
@@ -404,37 +412,43 @@ function RoleSelect({
   disabled: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  function toggle() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 6, left: rect.left })
+    }
+    setOpen((v) => !v)
+  }
 
   function select(role: string) {
     setOpen(false)
     onChange(role)
   }
 
-  const roleColor: Record<string, string> = {
-    developer: 'text-blue-400',
-    admin: 'text-red-400',
-    moderator: 'text-orange-400',
-    support: 'text-green-400',
-    user: 'text-zinc-400',
-  }
-
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={toggle}
         disabled={disabled}
         className="flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-40"
       >
-        <span className={roleColor[value] ?? 'text-zinc-400'}>{value}</span>
+        <span className={ROLE_COLOR[value] ?? 'text-zinc-400'}>{value}</span>
         <svg
           width="10"
           height="10"
@@ -447,16 +461,18 @@ function RoleSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1.5 w-36 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl">
+        <div
+          ref={menuRef}
+          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-50 w-36 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl"
+        >
           {ROLE_OPTIONS.map((r) => (
             <button
               key={r}
               onClick={() => select(r)}
               className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
-                r === value
-                  ? 'bg-violet-600/20 text-violet-300'
-                  : 'hover:bg-zinc-800 hover:text-white'
-              } ${roleColor[r] ?? 'text-zinc-400'}`}
+                r === value ? 'bg-violet-600/20' : 'hover:bg-zinc-800'
+              } ${ROLE_COLOR[r] ?? 'text-zinc-400'}`}
             >
               {r}
               {r === value && (
@@ -468,7 +484,7 @@ function RoleSelect({
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
