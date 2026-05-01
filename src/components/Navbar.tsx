@@ -53,6 +53,9 @@ export default async function Navbar() {
             <Link href="/pricing" className="hover:text-white transition-colors">
               Pricing
             </Link>
+            <Link href="/contact" className="hover:text-white transition-colors">
+              Contact
+            </Link>
             {user && (
               <Link href="/dashboard" className="hover:text-white transition-colors">
                 Dashboard
