@@ -95,12 +95,8 @@ export default function NewProjectForm({
     setDropdownOpen(false)
     setSearch('')
 
-    if (!title.trim()) {
-      setTitle(repo.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
-    }
-    if (!description.trim() && repo.description) {
-      setDescription(repo.description)
-    }
+    setTitle(repo.name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
+    if (repo.description) setDescription(repo.description)
 
     const tags = [repo.language, ...(repo.topics ?? [])].filter(Boolean) as string[]
     const matched = TECH_OPTIONS.filter((t) =>

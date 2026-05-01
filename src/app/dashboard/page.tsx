@@ -9,14 +9,21 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login')
 
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('*, reviews(count)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  const [{ data: projects }, { data: profile }] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('*, reviews(count)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', user.id)
+      .single(),
+  ])
 
-  const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Developer'
-  const avatarUrl = user.user_metadata?.avatar_url
+  const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Developer'
+  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
