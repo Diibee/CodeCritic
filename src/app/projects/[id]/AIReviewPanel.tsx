@@ -99,19 +99,21 @@ export default function AIReviewPanel({
     setError('')
     setConfirmRegen(false)
     startTransition(async () => {
-      try {
-        await generateAIReview(projectId)
-        router.refresh()
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : ''
+      const result = await generateAIReview(projectId)
+      if ('error' in result) {
+        const msg = result.error
         if (msg === 'PREMIUM_REQUIRED') {
           setError('AI reviews are a Premium feature. Upgrade to unlock them.')
         } else if (msg.startsWith('COOLDOWN:')) {
           const h = msg.split(':')[1]
           setError(`You can regenerate in ${h}h. Cooldown prevents excessive API usage.`)
+        } else if (msg === 'UNAUTHORIZED') {
+          setError('You are not authorized to do this.')
         } else {
-          setError('Failed to generate review. Please try again.')
+          setError(msg)
         }
+      } else {
+        router.refresh()
       }
     })
   }
