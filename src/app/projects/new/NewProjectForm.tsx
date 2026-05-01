@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client' // still needed for project insert
 
 const TECH_OPTIONS = [
   'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
@@ -51,20 +51,13 @@ export default function NewProjectForm({
 
   useEffect(() => {
     async function fetchRepos() {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.provider_token
-      if (!token) {
-        setReposError(true)
-        setReposLoading(false)
-        return
-      }
       try {
-        const res = await fetch(
-          'https://api.github.com/user/repos?per_page=100&sort=updated&type=owner',
-          { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } }
-        )
-        if (!res.ok) throw new Error()
+        const res = await fetch('/api/github/repos')
+        if (!res.ok) {
+          setReposError(true)
+          setReposLoading(false)
+          return
+        }
         const data: GitHubRepo[] = await res.json()
         setRepos(data.filter((r) => !r.fork))
       } catch {
