@@ -7,7 +7,7 @@ import {
   adminToggleFeatured,
   adminDeleteProject,
 } from '@/app/actions/admin'
-import { STAFF_ROLES, isStaffRole, type StaffRole, type StaffPower } from '@/lib/staff'
+import { STAFF_ROLES, isStaffRole, type StaffRole, type StaffPower } from '@/lib/staff-config'
 import { StaffBadge } from '@/components/StaffBadge'
 
 type Project = {

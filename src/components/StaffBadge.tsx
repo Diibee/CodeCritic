@@ -1,4 +1,4 @@
-import { isStaffRole, STAFF_ROLES } from '@/lib/staff'
+import { isStaffRole, STAFF_ROLES } from '@/lib/staff-config'
 
 export function StaffBadge({ role, size = 'sm' }: { role: string | null | undefined; size?: 'sm' | 'md' }) {
   if (!isStaffRole(role)) return null
