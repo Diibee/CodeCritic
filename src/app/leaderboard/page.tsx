@@ -24,10 +24,13 @@ type RawProject = {
 export default async function LeaderboardPage() {
   const supabase = await createClient()
 
-  const { data: raw } = await supabase
-    .from('projects')
-    .select('id, title, description, github_url, tech_stack, reviews(rating)')
-    .eq('is_public', true)
+  const [{ data: raw }, { data: allReviews }] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('id, title, description, github_url, tech_stack, reviews(rating)')
+      .eq('is_public', true),
+    supabase.from('reviews').select('reviewer_id'),
+  ])
 
   const projects: RawProject[] = (raw ?? []) as RawProject[]
 
@@ -47,6 +50,25 @@ export default async function LeaderboardPage() {
     .sort((a, b) => b.reviewCount - a.reviewCount)
     .slice(0, 10)
 
+  // Top reviewers
+  const reviewerCountMap: Record<string, number> = {}
+  for (const r of allReviews ?? []) {
+    reviewerCountMap[r.reviewer_id] = (reviewerCountMap[r.reviewer_id] ?? 0) + 1
+  }
+  const topReviewerIds = Object.entries(reviewerCountMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([id]) => id)
+  const { data: reviewerProfiles } = topReviewerIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', topReviewerIds)
+    : { data: [] }
+  const topReviewers = topReviewerIds
+    .map((id) => {
+      const profile = (reviewerProfiles ?? []).find((p) => p.id === id)
+      return { id, name: profile?.full_name ?? 'Anonymous', avatar: profile?.avatar_url ?? null, count: reviewerCountMap[id] }
+    })
+    .filter((r) => r.count > 0)
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
@@ -55,138 +77,143 @@ export default async function LeaderboardPage() {
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-white">🏆 Leaderboard</h1>
           <p className="mt-2 text-zinc-500">
-            The best-rated and most-discussed projects on CodeCritic.
+            The best-rated and most-discussed projects, plus the most active reviewers.
           </p>
         </div>
 
-        {/* Top Rated */}
-        <section className="mb-12">
-          <h2 className="mb-4 text-lg font-semibold text-white">Top Rated</h2>
-          <p className="mb-4 text-xs text-zinc-600">Minimum 2 reviews required.</p>
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-12">
+            {/* Top Rated */}
+            <section>
+              <h2 className="mb-4 text-lg font-semibold text-white">Top Rated</h2>
+              <p className="mb-4 text-xs text-zinc-600">Minimum 2 reviews required.</p>
+              {topRated.length === 0 ? (
+                <p className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-600">
+                  Not enough data yet — be the first to review some projects!
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {topRated.map((project, i) => {
+                    const previewUrl = getGitHubPreviewUrl(project.github_url)
+                    return (
+                      <Link
+                        key={project.id}
+                        href={`/projects/${project.id}`}
+                        className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors"
+                      >
+                        <div className="w-8 shrink-0 text-center">
+                          {i < 3 ? <span className="text-xl">{MEDALS[i]}</span> : <span className="text-sm font-medium text-zinc-600">#{i + 1}</span>}
+                        </div>
+                        <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
+                          {previewUrl ? (
+                            <Image src={previewUrl} alt={project.title} fill className="object-cover" sizes="80px" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-900/40 to-zinc-800 text-base opacity-30">{'</>'}</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-white truncate">{project.title}</div>
+                          <div className="mt-0.5 flex flex-wrap gap-2">
+                            {(project.tech_stack ?? []).slice(0, 3).map((t) => (
+                              <span key={t} className="text-xs text-zinc-500">{t}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-lg font-bold text-yellow-400">⭐ {project.avg.toFixed(1)}</div>
+                          <div className="text-xs text-zinc-600">{project.reviewCount} reviews</div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
 
-          {topRated.length === 0 ? (
-            <p className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-600">
-              Not enough data yet — be the first to review some projects!
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {topRated.map((project, i) => {
-                const previewUrl = getGitHubPreviewUrl(project.github_url)
-                return (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors"
-                  >
-                    <div className="w-8 shrink-0 text-center">
-                      {i < 3 ? (
-                        <span className="text-xl">{MEDALS[i]}</span>
-                      ) : (
-                        <span className="text-sm font-medium text-zinc-600">#{i + 1}</span>
-                      )}
-                    </div>
+            {/* Most Discussed */}
+            <section>
+              <h2 className="mb-4 text-lg font-semibold text-white">Most Discussed</h2>
+              {mostReviewed.length === 0 ? (
+                <p className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-600">No reviews yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {mostReviewed.map((project, i) => {
+                    const previewUrl = getGitHubPreviewUrl(project.github_url)
+                    return (
+                      <Link
+                        key={project.id}
+                        href={`/projects/${project.id}`}
+                        className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors"
+                      >
+                        <div className="w-8 shrink-0 text-center">
+                          {i < 3 ? <span className="text-xl">{MEDALS[i]}</span> : <span className="text-sm font-medium text-zinc-600">#{i + 1}</span>}
+                        </div>
+                        <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
+                          {previewUrl ? (
+                            <Image src={previewUrl} alt={project.title} fill className="object-cover" sizes="80px" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-900/40 to-zinc-800 text-base opacity-30">{'</>'}</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-white truncate">{project.title}</div>
+                          <div className="mt-0.5 flex flex-wrap gap-2">
+                            {(project.tech_stack ?? []).slice(0, 3).map((t) => (
+                              <span key={t} className="text-xs text-zinc-500">{t}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-lg font-bold text-violet-400">💬 {project.reviewCount}</div>
+                          <div className="text-xs text-zinc-600">reviews</div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
 
-                    <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
-                      {previewUrl ? (
+          {/* Top Reviewers sidebar */}
+          <div>
+            <h2 className="mb-4 text-lg font-semibold text-white">Top Reviewers</h2>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+              {topReviewers.length === 0 ? (
+                <p className="p-8 text-center text-xs text-zinc-600">No reviewers yet.</p>
+              ) : (
+                <div className="divide-y divide-zinc-800/50">
+                  {topReviewers.map((reviewer, i) => (
+                    <Link
+                      key={reviewer.id}
+                      href={`/u/${reviewer.id}`}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+                    >
+                      <span className="w-5 shrink-0 text-xs text-zinc-600 text-center">
+                        {i < 3 ? MEDALS[i] : `#${i + 1}`}
+                      </span>
+                      {reviewer.avatar ? (
                         <Image
-                          src={previewUrl}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
+                          src={reviewer.avatar}
+                          alt={reviewer.name}
+                          width={28}
+                          height={28}
+                          className="h-7 w-7 rounded-full object-cover shrink-0"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-900/40 to-zinc-800 text-base opacity-30">
-                          {'</>'}
+                        <div className="h-7 w-7 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-400 shrink-0">
+                          {reviewer.name[0].toUpperCase()}
                         </div>
                       )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-white truncate">{project.title}</div>
-                      <div className="mt-0.5 flex flex-wrap gap-2">
-                        {(project.tech_stack ?? []).slice(0, 3).map((t) => (
-                          <span key={t} className="text-xs text-zinc-500">{t}</span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 text-right">
-                      <div className="text-lg font-bold text-yellow-400">
-                        ⭐ {project.avg.toFixed(1)}
-                      </div>
-                      <div className="text-xs text-zinc-600">{project.reviewCount} reviews</div>
-                    </div>
-                  </Link>
-                )
-              })}
+                      <span className="flex-1 text-sm font-medium text-zinc-300 truncate">{reviewer.name}</span>
+                      <span className="text-xs text-zinc-500 shrink-0">{reviewer.count}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </section>
-
-        {/* Most Discussed */}
-        <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">Most Discussed</h2>
-
-          {mostReviewed.length === 0 ? (
-            <p className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-600">
-              No reviews yet — start the conversation!
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {mostReviewed.map((project, i) => {
-                const previewUrl = getGitHubPreviewUrl(project.github_url)
-                return (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors"
-                  >
-                    <div className="w-8 shrink-0 text-center">
-                      {i < 3 ? (
-                        <span className="text-xl">{MEDALS[i]}</span>
-                      ) : (
-                        <span className="text-sm font-medium text-zinc-600">#{i + 1}</span>
-                      )}
-                    </div>
-
-                    <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
-                      {previewUrl ? (
-                        <Image
-                          src={previewUrl}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-900/40 to-zinc-800 text-base opacity-30">
-                          {'</>'}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-white truncate">{project.title}</div>
-                      <div className="mt-0.5 flex flex-wrap gap-2">
-                        {(project.tech_stack ?? []).slice(0, 3).map((t) => (
-                          <span key={t} className="text-xs text-zinc-500">{t}</span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 text-right">
-                      <div className="text-lg font-bold text-violet-400">
-                        💬 {project.reviewCount}
-                      </div>
-                      <div className="text-xs text-zinc-600">reviews</div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </section>
+          </div>
+        </div>
       </main>
     </div>
   )

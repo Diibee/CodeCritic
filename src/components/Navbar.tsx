@@ -58,6 +58,11 @@ export default async function Navbar() {
                 Dashboard
               </Link>
             )}
+            {user && (
+              <Link href="/feed" className="hover:text-white transition-colors">
+                Feed
+              </Link>
+            )}
           </nav>
 
           {/* Right — actions */}

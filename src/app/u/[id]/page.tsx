@@ -4,9 +4,11 @@ import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import { checkAndGrantAchievements } from '@/app/actions/achievements'
-import { ACHIEVEMENTS, ACHIEVEMENT_MAP, CATEGORIES } from '@/lib/achievements'
+import { ACHIEVEMENTS, CATEGORIES } from '@/lib/achievements'
 import { isPremium } from '@/lib/subscription'
 import { StaffBadge } from '@/components/StaffBadge'
+import FollowButton from '@/components/FollowButton'
+import ShareButton from '@/components/ShareButton'
 
 function getGitHubPreviewUrl(githubUrl: string | null): string | null {
   if (!githubUrl) return null
@@ -33,6 +35,7 @@ export default async function UserProfilePage({
 
   const { data: { user: currentUser } } = await supabase.auth.getUser()
   const isOwnProfile = currentUser?.id === id
+  const isLoggedIn = !!currentUser && !isOwnProfile
 
   const { data: projects } = await supabase
     .from('projects')
@@ -41,14 +44,23 @@ export default async function UserProfilePage({
     .eq('is_public', true)
     .order('created_at', { ascending: false })
 
+  // Follower / following counts + whether current user follows this profile
+  const [{ count: followerCount }, { count: followingCount }, followRow] = await Promise.all([
+    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', id),
+    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', id),
+    isLoggedIn
+      ? supabase.from('follows').select('follower_id').eq('follower_id', currentUser!.id).eq('following_id', id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+  const isFollowing = !!(followRow as { data: unknown }).data
+
   const allProjects = projects ?? []
   const totalReviews = allProjects.reduce((acc, p) => acc + (p.reviews?.length ?? 0), 0)
-  const allRatings = allProjects.flatMap(p => (p.reviews ?? []).map((r: { rating: number }) => r.rating))
+  const allRatings = allProjects.flatMap((p) => (p.reviews ?? []).map((r: { rating: number }) => r.rating))
   const avgRating = allRatings.length > 0 ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length : null
 
   const displayName = profile.full_name || 'Anonymous'
 
-  // Trigger achievement check for own profile, then fetch earned achievements
   if (isOwnProfile) {
     await checkAndGrantAchievements(id).catch(() => {})
   }
@@ -59,8 +71,9 @@ export default async function UserProfilePage({
     .eq('user_id', id)
 
   const earnedKeys = new Set(earnedData?.map((a) => a.achievement_key) ?? [])
-
   const userIsPremium = await isPremium(id)
+
+  const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://code-critic-coral.vercel.app'}/u/${id}`
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -104,6 +117,14 @@ export default async function UserProfilePage({
                   Edit profile
                 </Link>
               )}
+              {isLoggedIn && (
+                <FollowButton
+                  targetUserId={id}
+                  initialFollowing={isFollowing}
+                  initialCount={followerCount ?? 0}
+                />
+              )}
+              <ShareButton url={profileUrl} label="Share" />
             </div>
             {profile.bio && (
               <p className="mt-2 max-w-xl text-zinc-400 leading-relaxed">{profile.bio}</p>
@@ -121,21 +142,19 @@ export default async function UserProfilePage({
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid grid-cols-3 divide-x divide-zinc-800 rounded-2xl border border-zinc-800 bg-zinc-900">
-          <div className="px-6 py-5 text-center">
-            <div className="text-2xl font-bold text-white">{allProjects.length}</div>
-            <div className="mt-1 text-xs text-zinc-500">Projects</div>
-          </div>
-          <div className="px-6 py-5 text-center">
-            <div className="text-2xl font-bold text-white">{totalReviews}</div>
-            <div className="mt-1 text-xs text-zinc-500">Reviews received</div>
-          </div>
-          <div className="px-6 py-5 text-center">
-            <div className="text-2xl font-bold text-white">
-              {avgRating !== null ? avgRating.toFixed(1) : '—'}
+        <div className="mb-8 grid grid-cols-5 divide-x divide-zinc-800 rounded-2xl border border-zinc-800 bg-zinc-900">
+          {[
+            { label: 'Projects', value: allProjects.length },
+            { label: 'Reviews received', value: totalReviews },
+            { label: 'Avg rating', value: avgRating !== null ? avgRating.toFixed(1) : '—' },
+            { label: 'Followers', value: followerCount ?? 0 },
+            { label: 'Following', value: followingCount ?? 0 },
+          ].map(({ label, value }) => (
+            <div key={label} className="px-4 py-5 text-center">
+              <div className="text-2xl font-bold text-white">{value}</div>
+              <div className="mt-1 text-xs text-zinc-500">{label}</div>
             </div>
-            <div className="mt-1 text-xs text-zinc-500">Avg rating</div>
-          </div>
+          ))}
         </div>
 
         {/* Projects */}

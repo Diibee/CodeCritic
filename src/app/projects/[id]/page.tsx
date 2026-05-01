@@ -4,11 +4,14 @@ import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/server'
 import { isPremium } from '@/lib/subscription'
 import ReviewForm from './ReviewForm'
+import ReviewCard from './ReviewCard'
+import type { ReviewComment } from './ReviewCard'
 import ProjectTabs from './ProjectTabs'
 import ProjectOwnerActions from './ProjectOwnerActions'
 import AIReviewPanel from './AIReviewPanel'
 import AnalyticsPanel, { computeAnalytics } from './AnalyticsPanel'
-import { StaffBadge } from '@/components/StaffBadge'
+import ProjectUpdates from './ProjectUpdates'
+import type { ProjectUpdate } from './ProjectUpdates'
 
 export default async function ProjectPage({
   params,
@@ -29,7 +32,6 @@ export default async function ProjectPage({
   const { data: { user } } = await supabase.auth.getUser()
   const isOwner = user?.id === project.user_id
 
-  // Private projects are only visible to their owner
   if (!project.is_public && !isOwner) notFound()
 
   const { data: reviews } = await supabase
@@ -38,14 +40,66 @@ export default async function ProjectPage({
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
-  // Fetch reviewer profiles
+  // Reviewer profiles
   const reviewerIds = [...new Set((reviews ?? []).map((r) => r.reviewer_id).filter(Boolean))]
   const { data: reviewerProfiles } = reviewerIds.length > 0
     ? await supabase.from('profiles').select('id, full_name, avatar_url, role').in('id', reviewerIds)
     : { data: [] }
-  const profileMap = Object.fromEntries(
-    (reviewerProfiles ?? []).map((p) => [p.id, p])
-  )
+  const profileMap = Object.fromEntries((reviewerProfiles ?? []).map((p) => [p.id, p]))
+
+  // Review votes
+  const reviewIds = (reviews ?? []).map((r) => r.id)
+  const { data: allVotes } = reviewIds.length > 0
+    ? await supabase.from('review_votes').select('review_id, user_id').in('review_id', reviewIds)
+    : { data: [] }
+  const voteCountMap: Record<string, number> = {}
+  const userVotedSet = new Set<string>()
+  for (const v of allVotes ?? []) {
+    voteCountMap[v.review_id] = (voteCountMap[v.review_id] ?? 0) + 1
+    if (v.user_id === user?.id) userVotedSet.add(v.review_id)
+  }
+
+  // Review comments
+  const { data: rawComments } = reviewIds.length > 0
+    ? await supabase
+        .from('review_comments')
+        .select('id, review_id, user_id, comment, created_at')
+        .in('review_id', reviewIds)
+        .order('created_at', { ascending: true })
+    : { data: [] }
+  const commentUserIds = [...new Set((rawComments ?? []).map((c) => c.user_id))]
+  const { data: commentProfiles } = commentUserIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name').in('id', commentUserIds)
+    : { data: [] }
+  const commentUserMap = Object.fromEntries((commentProfiles ?? []).map((p) => [p.id, p.full_name]))
+  const commentsByReview: Record<string, ReviewComment[]> = {}
+  for (const c of rawComments ?? []) {
+    if (!commentsByReview[c.review_id]) commentsByReview[c.review_id] = []
+    commentsByReview[c.review_id].push({
+      id: c.id,
+      user_id: c.user_id,
+      comment: c.comment,
+      created_at: c.created_at,
+      user_name: commentUserMap[c.user_id] ?? null,
+    })
+  }
+
+  // Project updates
+  const { data: rawUpdates } = await supabase
+    .from('project_updates')
+    .select('id, body, created_at')
+    .eq('project_id', id)
+    .order('created_at', { ascending: false })
+  const projectUpdates: ProjectUpdate[] = (rawUpdates ?? []).map((u) => ({
+    id: u.id,
+    body: u.body,
+    created_at: u.created_at,
+  }))
+
+  // Current user name (for optimistic comments)
+  const { data: currentProfile } = user
+    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    : { data: null }
 
   const avgRating =
     reviews && reviews.length > 0
@@ -55,12 +109,10 @@ export default async function ProjectPage({
   const demoUrl: string | null = project.demo_url ?? null
   const githubUrl: string | null = project.github_url ?? null
 
-  // Premium status for owner (for analytics tab + featured toggle)
   const ownerIsPremium = isOwner ? await isPremium(project.user_id) : false
 
   const overview = (
     <div className="space-y-6">
-      {/* Reviews section */}
       <div>
         <h2 className="mb-6 text-xl font-semibold text-white">
           Reviews{' '}
@@ -84,33 +136,18 @@ export default async function ProjectPage({
           <div className="space-y-4">
             {reviews.map((review) => {
               const reviewer = review.reviewer_id ? profileMap[review.reviewer_id] : null
-              const reviewerName = reviewer?.full_name || 'Anonymous'
               return (
-                <div key={review.id} className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {review.reviewer_id ? (
-                        <Link
-                          href={`/u/${review.reviewer_id}`}
-                          className="text-sm font-medium text-zinc-300 hover:text-violet-400 transition-colors"
-                        >
-                          {reviewerName}
-                        </Link>
-                      ) : (
-                        <span className="text-sm font-medium text-zinc-300">{reviewerName}</span>
-                      )}
-                      <StaffBadge role={reviewer?.role} />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={i < review.rating ? 'text-yellow-400' : 'text-zinc-700'}>
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-zinc-400 leading-relaxed">{review.comment}</p>
-                </div>
+                <ReviewCard
+                  key={review.id}
+                  projectId={id}
+                  review={review}
+                  reviewer={reviewer ?? null}
+                  voteCount={voteCountMap[review.id] ?? 0}
+                  userVoted={userVotedSet.has(review.id)}
+                  comments={commentsByReview[review.id] ?? []}
+                  currentUserId={user?.id ?? null}
+                  currentUserName={currentProfile?.full_name ?? null}
+                />
               )
             })}
           </div>
@@ -121,6 +158,14 @@ export default async function ProjectPage({
         )}
       </div>
     </div>
+  )
+
+  const updatesNode = (
+    <ProjectUpdates
+      projectId={id}
+      initialUpdates={projectUpdates}
+      isOwner={isOwner}
+    />
   )
 
   const analyticsNode = isOwner && ownerIsPremium ? (
@@ -203,11 +248,12 @@ export default async function ProjectPage({
           )}
         </div>
 
-        {/* Tabs: Overview + AI Review + Analytics + Preview */}
         <ProjectTabs
           githubUrl={githubUrl}
           demoUrl={demoUrl}
           overview={overview}
+          updates={updatesNode}
+          updatesCount={projectUpdates.length}
           aiReview={
             <AIReviewPanel
               projectId={id}

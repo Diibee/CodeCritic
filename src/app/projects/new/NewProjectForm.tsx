@@ -17,6 +17,11 @@ function extractGithubOwner(url: string): string | null {
   return match ? match[1] : null
 }
 
+function extractGithubRepo(url: string): { owner: string; repo: string } | null {
+  const match = url.trim().match(/github\.com\/([^/?#\s]+)\/([^/?#\s.]+)/)
+  return match ? { owner: match[1], repo: match[2] } : null
+}
+
 export default function NewProjectForm({
   userId,
   githubUsername,
@@ -30,6 +35,7 @@ export default function NewProjectForm({
   const [demoUrl, setDemoUrl] = useState('')
   const [selectedTech, setSelectedTech] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -47,6 +53,38 @@ export default function NewProjectForm({
     setSelectedTech((prev) =>
       prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]
     )
+  }
+
+  async function importFromGitHub() {
+    const parsed = extractGithubRepo(githubUrl)
+    if (!parsed) return
+    setImporting(true)
+    try {
+      const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`)
+      if (!res.ok) throw new Error('Could not fetch repo')
+      const data = await res.json()
+
+      if (!title.trim() && data.name) {
+        setTitle(data.name.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()))
+      }
+      if (!description.trim() && data.description) {
+        setDescription(data.description)
+      }
+
+      const topics: string[] = data.topics ?? []
+      const language: string | null = data.language ?? null
+      const matched = TECH_OPTIONS.filter((t) =>
+        topics.some((topic) => topic.toLowerCase() === t.toLowerCase()) ||
+        (language && language.toLowerCase() === t.toLowerCase())
+      )
+      if (matched.length > 0) {
+        setSelectedTech((prev) => [...new Set([...prev, ...matched])])
+      }
+    } catch {
+      // silently fail — user can fill in manually
+    } finally {
+      setImporting(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -107,6 +145,64 @@ export default function NewProjectForm({
         <span className="ml-auto text-xs text-zinc-600">Only your repos are accepted</span>
       </div>
 
+      {/* Links (GitHub first so we can import) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            GitHub URL <span className="text-red-400">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type="url"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder={`https://github.com/${githubUsername}/...`}
+              className={`w-full rounded-xl border bg-zinc-900 px-4 py-3 pr-10 text-sm text-white placeholder-zinc-600 focus:outline-none ${
+                ownerMismatch
+                  ? 'border-red-600 focus:border-red-500'
+                  : ownerOk
+                  ? 'border-green-600 focus:border-green-500'
+                  : 'border-zinc-700 focus:border-violet-500'
+              }`}
+              required
+            />
+            {(ownerMismatch || ownerOk) && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                {ownerOk ? '✓' : '✗'}
+              </span>
+            )}
+          </div>
+          {ownerMismatch && (
+            <p className="mt-1.5 text-xs text-red-400">
+              This repo belongs to @{urlOwner}, not @{githubUsername}.
+            </p>
+          )}
+          {ownerOk && (
+            <div className="mt-1.5 flex items-center justify-between">
+              <p className="text-xs text-green-400">Verified: repo belongs to @{githubUsername}.</p>
+              <button
+                type="button"
+                onClick={importFromGitHub}
+                disabled={importing}
+                className="text-xs text-violet-400 hover:text-violet-300 transition-colors disabled:opacity-40"
+              >
+                {importing ? 'Importing…' : '✨ Import from GitHub'}
+              </button>
+            </div>
+          )}
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Live demo URL</label>
+          <input
+            type="url"
+            value={demoUrl}
+            onChange={(e) => setDemoUrl(e.target.value)}
+            placeholder="https://myproject.vercel.app"
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
+          />
+        </div>
+      </div>
+
       {/* Title */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-zinc-300">
@@ -155,56 +251,6 @@ export default function NewProjectForm({
               {tech}
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Links */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-300">
-            GitHub URL <span className="text-red-400">*</span>
-          </label>
-          <div className="relative">
-            <input
-              type="url"
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-              placeholder={`https://github.com/${githubUsername}/...`}
-              className={`w-full rounded-xl border bg-zinc-900 px-4 py-3 pr-10 text-sm text-white placeholder-zinc-600 focus:outline-none ${
-                ownerMismatch
-                  ? 'border-red-600 focus:border-red-500'
-                  : ownerOk
-                  ? 'border-green-600 focus:border-green-500'
-                  : 'border-zinc-700 focus:border-violet-500'
-              }`}
-              required
-            />
-            {(ownerMismatch || ownerOk) && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
-                {ownerOk ? '✓' : '✗'}
-              </span>
-            )}
-          </div>
-          {ownerMismatch && (
-            <p className="mt-1.5 text-xs text-red-400">
-              This repo belongs to @{urlOwner}, not @{githubUsername}.
-            </p>
-          )}
-          {ownerOk && (
-            <p className="mt-1.5 text-xs text-green-400">
-              Verified: repo belongs to @{githubUsername}.
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-zinc-300">Live demo URL</label>
-          <input
-            type="url"
-            value={demoUrl}
-            onChange={(e) => setDemoUrl(e.target.value)}
-            placeholder="https://myproject.vercel.app"
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none"
-          />
         </div>
       </div>
 

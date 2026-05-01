@@ -180,3 +180,62 @@ alter table public.projects
   add column if not exists ai_review text,
   add column if not exists ai_review_at timestamptz,
   add column if not exists is_featured boolean default false not null;
+
+-- ===========================
+-- REVIEW VOTES (upvotes)
+-- ===========================
+create table if not exists public.review_votes (
+  review_id uuid references public.reviews on delete cascade not null,
+  user_id uuid references auth.users on delete cascade not null,
+  created_at timestamptz default now() not null,
+  primary key (review_id, user_id)
+);
+alter table public.review_votes enable row level security;
+create policy "Votes are viewable by everyone" on public.review_votes for select using (true);
+create policy "Authenticated users can upvote" on public.review_votes for insert with check (auth.uid() = user_id);
+create policy "Users can remove their vote" on public.review_votes for delete using (auth.uid() = user_id);
+
+-- ===========================
+-- FOLLOWS
+-- ===========================
+create table if not exists public.follows (
+  follower_id uuid references auth.users on delete cascade not null,
+  following_id uuid references auth.users on delete cascade not null,
+  created_at timestamptz default now() not null,
+  primary key (follower_id, following_id),
+  constraint no_self_follow check (follower_id != following_id)
+);
+alter table public.follows enable row level security;
+create policy "Follows are viewable by everyone" on public.follows for select using (true);
+create policy "Authenticated users can follow" on public.follows for insert with check (auth.uid() = follower_id);
+create policy "Users can unfollow" on public.follows for delete using (auth.uid() = follower_id);
+
+-- ===========================
+-- REVIEW COMMENTS
+-- ===========================
+create table if not exists public.review_comments (
+  id uuid default gen_random_uuid() primary key,
+  review_id uuid references public.reviews on delete cascade not null,
+  user_id uuid references auth.users on delete cascade not null,
+  comment text not null,
+  created_at timestamptz default now() not null
+);
+alter table public.review_comments enable row level security;
+create policy "Comments are viewable by everyone" on public.review_comments for select using (true);
+create policy "Authenticated users can comment" on public.review_comments for insert with check (auth.uid() = user_id);
+create policy "Users can delete their comments" on public.review_comments for delete using (auth.uid() = user_id);
+
+-- ===========================
+-- PROJECT UPDATES
+-- ===========================
+create table if not exists public.project_updates (
+  id uuid default gen_random_uuid() primary key,
+  project_id uuid references public.projects on delete cascade not null,
+  user_id uuid references auth.users on delete cascade not null,
+  body text not null,
+  created_at timestamptz default now() not null
+);
+alter table public.project_updates enable row level security;
+create policy "Updates are viewable by everyone" on public.project_updates for select using (true);
+create policy "Project owners can post updates" on public.project_updates for insert with check (auth.uid() = user_id and auth.uid() = (select user_id from public.projects where id = project_id));
+create policy "Project owners can delete updates" on public.project_updates for delete using (auth.uid() = user_id);
