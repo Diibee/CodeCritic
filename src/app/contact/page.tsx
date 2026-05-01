@@ -24,7 +24,7 @@ export default function ContactPage() {
 
         {/* Email card */}
         <a
-          href={`mailto:${EMAIL}`}
+          href={`mailto:dibe.mtt@gmail.com`}
           className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5 hover:border-violet-600/50 transition-colors group mb-8"
         >
           <span className="text-2xl shrink-0">📧</span>
