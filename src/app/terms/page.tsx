@@ -206,8 +206,8 @@ export default function TermsPage() {
             <ul>
               <li>
                 Email:{' '}
-                <a href="mailto:hello@codecritic.dev" className="text-violet-400 hover:underline">
-                  hello@codecritic.dev
+                <a href="mailto:dibe.mtt@gmail.com" className="text-violet-400 hover:underline">
+                  dibe.mtt@gmail.com
                 </a>
               </li>
               <li>

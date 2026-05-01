@@ -106,8 +106,8 @@ export default function PrivacyPage() {
               We retain your personal information for as long as your account is active or as needed to
               provide services. You may request deletion of your account and associated data at any time by
               contacting us at{' '}
-              <a href="mailto:hello@codecritic.dev" className="text-violet-400 hover:underline">
-                hello@codecritic.dev
+              <a href="mailto:dibe.mtt@gmail.com" className="text-violet-400 hover:underline">
+                dibe.mtt@gmail.com
               </a>
               .
             </p>
@@ -152,8 +152,8 @@ export default function PrivacyPage() {
             </ul>
             <p>
               To exercise any of these rights, contact us at{' '}
-              <a href="mailto:hello@codecritic.dev" className="text-violet-400 hover:underline">
-                hello@codecritic.dev
+              <a href="mailto:dibe.mtt@gmail.com" className="text-violet-400 hover:underline">
+                dibe.mtt@gmail.com
               </a>
               .
             </p>
@@ -174,8 +174,8 @@ export default function PrivacyPage() {
             <ul>
               <li>
                 Email:{' '}
-                <a href="mailto:hello@codecritic.dev" className="text-violet-400 hover:underline">
-                  hello@codecritic.dev
+                <a href="mailto:dibe.mtt@gmail.com" className="text-violet-400 hover:underline">
+                  dibe.mtt@gmail.com
                 </a>
               </li>
               <li>

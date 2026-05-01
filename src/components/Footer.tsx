@@ -33,12 +33,12 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Company */}
+          {/* Contact */}
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">Company</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact</p>
             <ul className="space-y-2">
               {[
-                { href: '/contact', label: 'Contact us' },
+                { href: '/contact', label: 'Get in touch' },
               ].map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-sm text-zinc-500 hover:text-white transition-colors">
@@ -71,7 +71,7 @@ export default function Footer() {
           <p className="text-xs text-zinc-700">
             © {new Date().getFullYear()} CodeCritic. Built with Next.js &amp; Supabase.
           </p>
-          <p className="text-xs text-zinc-700">Made with ❤️ for developers</p>
+          <p className="text-xs text-zinc-700">A solo project by <a href="mailto:dibe.mtt@gmail.com" className="hover:text-zinc-500 transition-colors">Matteo</a></p>
         </div>
       </div>
     </footer>
