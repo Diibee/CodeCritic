@@ -36,6 +36,15 @@ export async function POST(request: NextRequest) {
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       updated_at: new Date().toISOString(),
     }).eq('stripe_customer_id', customerId)
+
+    // Remove featured from all user's projects when no longer premium
+    if (status !== 'active') {
+      await supabaseAdmin
+        .from('projects')
+        .update({ is_featured: false })
+        .eq('user_id', existing.user_id)
+        .eq('is_featured', true)
+    }
   }
 
   switch (event.type) {
