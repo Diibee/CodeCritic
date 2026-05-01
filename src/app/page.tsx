@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 
 export default function HomePage() {
   return (
@@ -125,17 +126,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-800 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <span className="text-sm font-semibold text-white">
-            Code<span className="text-violet-500">Critic</span>
-          </span>
-          <p className="text-xs text-zinc-600">
-            © {new Date().getFullYear()} CodeCritic. Built with Next.js & Supabase.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
