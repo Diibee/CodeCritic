@@ -96,10 +96,13 @@ export default async function ProjectPage({
     created_at: u.created_at,
   }))
 
-  // Current user name (for optimistic comments)
-  const { data: currentProfile } = user
-    ? await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-    : { data: null }
+  // Current user name (for optimistic comments) + owner profile
+  const [{ data: currentProfile }, { data: ownerProfile }] = await Promise.all([
+    user
+      ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      : Promise.resolve({ data: null }),
+    supabase.from('profiles').select('full_name, avatar_url').eq('id', project.user_id).single(),
+  ])
 
   const avgRating =
     reviews && reviews.length > 0
@@ -204,6 +207,25 @@ export default async function ProjectPage({
               </div>
             )}
           </div>
+
+          {ownerProfile?.full_name && (
+            <div className="mb-4 flex items-center gap-2">
+              {ownerProfile.avatar_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={ownerProfile.avatar_url}
+                  alt={ownerProfile.full_name}
+                  className="h-5 w-5 rounded-full"
+                />
+              )}
+              <Link
+                href={`/u/${project.user_id}`}
+                className="text-sm text-zinc-500 hover:text-violet-400 transition-colors"
+              >
+                {ownerProfile.full_name}
+              </Link>
+            </div>
+          )}
 
           <p className="mb-6 text-zinc-400 leading-relaxed">{project.description}</p>
 

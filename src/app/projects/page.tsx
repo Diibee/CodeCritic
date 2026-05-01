@@ -103,6 +103,13 @@ export default async function ProjectsPage({
   // Featured projects always bubble to the top
   projects = [...projects].sort((a, b) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0))
 
+  // Fetch owner profiles
+  const ownerIds = [...new Set(projects.map((p) => p.user_id).filter(Boolean))]
+  const { data: ownerProfiles } = ownerIds.length > 0
+    ? await supabase.from('profiles').select('id, full_name').in('id', ownerIds)
+    : { data: [] }
+  const ownerMap = Object.fromEntries((ownerProfiles ?? []).map((p) => [p.id, p.full_name]))
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <Navbar />
@@ -168,11 +175,12 @@ export default async function ProjectsPage({
                 : null
               const previewUrl = getGitHubPreviewUrl(project.github_url ?? null)
 
+              const ownerName = ownerMap[project.user_id] ?? null
+
               return (
-                <Link
+                <div
                   key={project.id}
-                  href={`/projects/${project.id}`}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 transition-colors"
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 hover:border-zinc-700 transition-colors"
                 >
                   {/* Preview image */}
                   <div className="relative h-44 w-full shrink-0 overflow-hidden bg-zinc-800">
@@ -196,10 +204,15 @@ export default async function ProjectsPage({
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <h3 className="font-semibold text-white group-hover:text-violet-300 transition-colors line-clamp-1">
-                          {project.title}
+                          <Link
+                            href={`/projects/${project.id}`}
+                            className="after:absolute after:inset-0 after:content-['']"
+                          >
+                            {project.title}
+                          </Link>
                         </h3>
                         {project.is_featured && (
-                          <span className="shrink-0 rounded-full border border-amber-700/60 bg-amber-900/20 px-2 py-0.5 text-[10px] text-amber-400">
+                          <span className="relative z-10 shrink-0 rounded-full border border-amber-700/60 bg-amber-900/20 px-2 py-0.5 text-[10px] text-amber-400">
                             Featured
                           </span>
                         )}
@@ -227,17 +240,17 @@ export default async function ProjectsPage({
 
                     <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
                       <Stars avg={avgRating} count={reviewCount} />
-                      <div className="flex gap-3">
-                        {project.github_url && (
-                          <span className="text-xs text-zinc-600">GitHub ↗</span>
-                        )}
-                        {project.demo_url && (
-                          <span className="text-xs text-zinc-600">Demo ↗</span>
-                        )}
-                      </div>
+                      {ownerName && (
+                        <Link
+                          href={`/u/${project.user_id}`}
+                          className="relative z-10 text-xs text-zinc-500 hover:text-violet-400 transition-colors truncate max-w-[120px]"
+                        >
+                          {ownerName}
+                        </Link>
+                      )}
                     </div>
                   </div>
-                </Link>
+                </div>
               )
             })}
           </div>
