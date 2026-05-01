@@ -91,6 +91,7 @@ export default function SettingsForm({
     setAvatarUrl(publicUrl)
     await updateAvatarUrl(publicUrl)
     setAvatarUploading(false)
+    router.refresh()
   }
 
   function handleProfileSave(formData: FormData) {
