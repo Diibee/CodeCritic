@@ -35,7 +35,7 @@ export default async function AdminPage() {
     is_featured: p.is_featured ?? false,
     created_at: p.created_at,
     user_id: p.user_id,
-    owner_name: (p.profiles as { full_name: string | null } | null)?.full_name ?? null,
+    owner_name: (Array.isArray(p.profiles) ? p.profiles[0] : p.profiles as { full_name: string | null } | null)?.full_name ?? null,
     review_count: Array.isArray(p.reviews) ? p.reviews.length : 0,
   }))
 
