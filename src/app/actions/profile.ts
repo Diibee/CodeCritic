@@ -37,8 +37,12 @@ export async function updateAvatarUrl(url: string) {
 
   if (error) return { error: error.message }
 
+  // Also update auth user metadata so all pages see the new avatar
+  await supabase.auth.updateUser({ data: { avatar_url: url } })
+
   revalidatePath('/settings')
   revalidatePath('/dashboard')
+  revalidatePath(`/u/${user.id}`)
   return { success: true }
 }
 
